@@ -1,0 +1,33 @@
+Shell(pid=56)1> Makefile
+README.txt
+answers.txt
+b.sh
+shell
+shell.c
+shell.o
+smp1.err
+smp1.in
+smp1.out
+smp1_tests.c
+smp1_tests.h
+smp1_tests.o
+testrunner.c
+testrunner.h
+testrunner.o
+Shell(pid=56)2> Makefile
+README.txt
+answers.txt
+b.sh
+shell
+shell.c
+shell.o
+smp1.err
+smp1.in
+smp1.out
+smp1_tests.c
+smp1_tests.h
+smp1_tests.o
+testrunner.c
+testrunner.h
+testrunner.o
+Shell(pid=56)3> Exiting process 56

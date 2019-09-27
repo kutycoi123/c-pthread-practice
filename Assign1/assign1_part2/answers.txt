@@ -1,0 +1,62 @@
+
+
+
+Answering Questions
+==================
+
+  1. Why is it necessary to implement a change directory 'cd' command in
+     the shell?  Could it be implemented by an external program instead?
+     - It's necessary since it allows our shell to navigate through directories and therefore allows
+     different actions on each directory like create/modify/delete/execute files. 
+     - Yes, it used to be implemented by an external program but now it's a shell builtin. 
+
+
+  2. Explain how our sample shell implements the change directory command.
+     - Our shell uses chdir() to change the current directory of calling process
+
+
+  3. What would happen if this program did not use the fork function, but
+     just used execv directly?  (Try it!)
+
+     - If the program did not use fork() and used execv() directly, 
+     it would replace the current process with a whole new process which executes the command as a new program and once the execution finished, it terminates. 
+
+  4. Explain what the return value of fork() means and how this program
+     uses it.
+
+     - If fork() executes successfully, it returns PID of child process to the parent, and 0 to the child.
+     - If error occurs, it returns -1 to the parent.
+     - The shell program uses fork() to create child processes in order to execute shell command by using execv()
+
+  5. What would happen if fork() were called prior to chdir(), and chdir()
+     invoked within the forked child process?  (Try it!)
+
+     - If fork() were called prior to chdir() like above, the chdir() will be invoked inside
+     child process which means it will only change the directory for child process and has no change
+     on current working directory of parent process.
+
+
+  6. Can you run multiple versions of ./b.sh in the background?
+     What happens to their output?
+      - We can run multiple versions of ./b.sh in the background
+      - Suppose we run 2 versions at the same time, their outputs will have different PID
+
+  7. Can you execute a second instance of our shell from within our shell
+     program (use './shell')?  Which shell receives your input?
+      - The second shell replaces the current shell and receives the input
+
+  8. What happens if you type CTRL-C while the countdown script ./b.sh is
+     running?  What if ./b.sh is running in the background?
+      - If we type CTRL-C when running ./b.sh, it will terminate the script right away
+      - If we type CTRL-C when running ./b.sh in the background, it will not terminate and just keeps running till the end.
+  9. Can a shell kill itself?  Can a shell within a shell kill the parent
+     shell?
+
+     - A shell can kill itself and also can kill the parent shell.
+  10. What happens to background processes when you exit from the shell?
+      Do they continue to run?  Can you see them with the 'ps' command?
+
+      - Yes they do continue to run until they finish. We can still see them with ps command.
+
+
+
