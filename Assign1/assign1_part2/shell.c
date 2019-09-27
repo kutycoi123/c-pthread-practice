@@ -84,14 +84,8 @@ int main(int argc, char **argv)
 
 	/* Allow the Shell prompt to display the pid of this process */
 	shell_pid = getpid();
-
-	//test_global = 0;
-	//glob_var = mmap(NULL, sizeof *glob_var, PROT_READ | PROT_WRITE, 
-    //                MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-	//*glob_var = 0;
-	//int check = 0;
-
-
+	//freopen("smp1.in", "r", stdin);
+	//freopen("smp1.out", "w", stdout);
 	while (1) {
 		
 
@@ -168,7 +162,6 @@ int main(int argc, char **argv)
 					continue;
 				}
 				exec_argv_dynamic_ptr = argv_store[nth_command - 1];
-
 			}
 			if(!strcmp(exec_argv_dynamic_ptr[0], "sub")){
 				
@@ -188,15 +181,9 @@ int main(int argc, char **argv)
 				continue;
 			}
 			if (pid_from_fork == 0) {
-				printf("About to run the child func\n");
-			test_global += 1;
-				
-				printf("test_global=%d\n", test_global);
 				return imthechild(exec_argv_dynamic_ptr[0], &exec_argv_dynamic_ptr[0]);
 				/* Exit from main. */
 			} else {
-			test_global += 1;
-
 				imtheparent(pid_from_fork, run_in_background);
         		// munmap(glob_var, sizeof *glob_var);
 				/* Parent will continue around the loop. */
