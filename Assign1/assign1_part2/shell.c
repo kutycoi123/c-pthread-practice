@@ -14,7 +14,7 @@
 /* DEFINE SECTION */
 #define SHELL_BUFFER_SIZE 256   /* Size of the Shell input buffer        */
 #define SHELL_MAX_ARGS 8        /* Maximum number of arguments parsed    */
-
+#define MAXIMUM_REUSED_COMMAND 9 /* Maximum number of reused commands by !NN */
 /* VARIABLE SECTION */
 enum { STATE_SPACE, STATE_NON_SPACE };	/* Parser states */
 
@@ -58,7 +58,6 @@ int isNumber(char*str){
 	}
 	return 1;
 }
-int test_global = 0;
 
 // static int *glob_var;
 /* MAIN PROCEDURE SECTION */
@@ -73,7 +72,7 @@ int main(int argc, char **argv)
 	char *exec_argv[SHELL_MAX_ARGS + 1];
 	
 
-	char **argv_store[9]; //to store previous argv commands
+	char **argv_store[MAXIMUM_REUSED_COMMAND]; //to store previous argv commands
 	for(int i = 0; i < 9; ++i){
 		argv_store[i] = malloc((SHELL_MAX_ARGS + 1) * sizeof(char*));
 	}
@@ -84,8 +83,7 @@ int main(int argc, char **argv)
 
 	/* Allow the Shell prompt to display the pid of this process */
 	shell_pid = getpid();
-	//freopen("smp1.in", "r", stdin);
-	//freopen("smp1.out", "w", stdout);
+	int test_glob = 0;
 	while (1) {
 		
 
@@ -130,14 +128,14 @@ int main(int argc, char **argv)
 			continue;
 		/* Terminate the list of exec parameters with NULL */
 		exec_argv[exec_argc] = NULL;
-
-		// fprintf(stderr, "glob_var=%d\n", *glob_var);
-
-		if(counter <= 9){
+		if(counter <= MAXIMUM_REUSED_COMMAND){
+			//Store current arguments which may be reused by !NN command
 			for(int i = 0; i < exec_argc; ++i){
 				argv_store[counter - 1][i] = malloc(SHELL_BUFFER_SIZE * sizeof(char));
 				strcpy(argv_store[counter - 1][i], exec_argv[i]);
 			}
+			//Set last argument tobe NULL
+			argv_store[counter-1][exec_argc] = NULL;
 		}
 		/* If Shell runs 'exit' it exits the program. */
 		if (!strcmp(exec_argv[0], "exit")) {
@@ -168,11 +166,11 @@ int main(int argc, char **argv)
 				exec_argv_dynamic_ptr[0] = "./shell";
 				exec_argv_dynamic_ptr[1] = NULL;
 				
-
 			}
 			/* Execute Commands */
 			/* Try replacing 'fork()' with '0'.  What happens? */
 
+			//test_glob++;	
 			pid_from_fork = fork();
 			if (pid_from_fork < 0) {
 				/* Error: fork() failed.  Unlikely, but possible (e.g. OS *
@@ -181,6 +179,7 @@ int main(int argc, char **argv)
 				continue;
 			}
 			if (pid_from_fork == 0) {
+				//printf("test_glob=%d\n", test_glob);
 				return imthechild(exec_argv_dynamic_ptr[0], &exec_argv_dynamic_ptr[0]);
 				/* Exit from main. */
 			} else {
