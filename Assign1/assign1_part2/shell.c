@@ -21,7 +21,7 @@ enum { STATE_SPACE, STATE_NON_SPACE };	/* Parser states */
 
 int imthechild(const char *path_to_exec, char *const args[])
 {
-	return execvp(path_to_exec, args) ? -1 : 0;
+	return execvp(path_to_exec, args) ? -1 : 0; //use execvp to execute 
 }
 
 void imtheparent(pid_t child_pid, int run_in_background)
@@ -181,7 +181,6 @@ int main(int argc, char **argv)
 			/* Try replacing 'fork()' with '0'.  What happens? */
 
 			pid_from_fork = fork();
-
 			if (pid_from_fork < 0) {
 				/* Error: fork() failed.  Unlikely, but possible (e.g. OS *
 				 * kernel runs out of memory or process descriptors).     */
@@ -190,15 +189,19 @@ int main(int argc, char **argv)
 			}
 			if (pid_from_fork == 0) {
 				printf("About to run the child func\n");
-				test_global += 1;
+			test_global += 1;
+				
 				printf("test_global=%d\n", test_global);
 				return imthechild(exec_argv_dynamic_ptr[0], &exec_argv_dynamic_ptr[0]);
 				/* Exit from main. */
 			} else {
+			test_global += 1;
+
 				imtheparent(pid_from_fork, run_in_background);
         		// munmap(glob_var, sizeof *glob_var);
 				/* Parent will continue around the loop. */
 			}
+
 		} /* end if */
 		counter++;
 	} /* end while loop */

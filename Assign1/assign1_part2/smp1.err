@@ -1,4 +1,4 @@
-  Parent says 'child process has been forked with pid=57'
-  Parent says 'wait() returned so the child with pid=57 is finished.'
-  Parent says 'child process has been forked with pid=58'
-  Parent says 'wait() returned so the child with pid=58 is finished.'
+  Parent says 'child process has been forked with pid=20'
+  Parent says 'wait() returned so the child with pid=20 is finished.'
+  Parent says 'child process has been forked with pid=21'
+  Parent says 'wait() returned so the child with pid=21 is finished.'
