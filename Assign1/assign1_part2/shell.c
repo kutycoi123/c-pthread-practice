@@ -59,6 +59,7 @@ int isNumber(char*str){
 	return 1;
 }
 
+int test_glob = 0;
 // static int *glob_var;
 /* MAIN PROCEDURE SECTION */
 int main(int argc, char **argv)
@@ -82,13 +83,12 @@ int main(int argc, char **argv)
 	}
 
 	/* Allow the Shell prompt to display the pid of this process */
-	shell_pid = getpid();
-	int test_glob = 0;
 	while (1) {
 		
 
 	/* The Shell runs in an infinite loop, processing input. */
 
+		shell_pid = getpid();
 		fprintf(stdout, "Shell(pid=%d)%d> ", shell_pid, counter);
 		fflush(stdout);
 
@@ -152,6 +152,7 @@ int main(int argc, char **argv)
 
 		} else {
 			char**exec_argv_dynamic_ptr = exec_argv;
+			//Handle reuse command !NN
 			if (exec_argv[0][0] == '!'){
 				int nth_command = exec_argv[0][1] - '0';
 				//Invalid command
@@ -161,16 +162,20 @@ int main(int argc, char **argv)
 				}
 				exec_argv_dynamic_ptr = argv_store[nth_command - 1];
 			}
+			//Handle sub command
+			int check  = 0;
 			if(!strcmp(exec_argv_dynamic_ptr[0], "sub")){
-				
+				check = 1;	
 				exec_argv_dynamic_ptr[0] = "./shell";
 				exec_argv_dynamic_ptr[1] = NULL;
-				
+				if(test_glob == 2){
+					fprintf(stderr, "Too deep!\n");
+					continue;
+				}	
 			}
 			/* Execute Commands */
 			/* Try replacing 'fork()' with '0'.  What happens? */
 
-			//test_glob++;	
 			pid_from_fork = fork();
 			if (pid_from_fork < 0) {
 				/* Error: fork() failed.  Unlikely, but possible (e.g. OS *
@@ -179,12 +184,14 @@ int main(int argc, char **argv)
 				continue;
 			}
 			if (pid_from_fork == 0) {
-				//printf("test_glob=%d\n", test_glob);
+				test_glob++;
+				printf("test_glob=%d\n", test_glob);
+				if(check) continue;
 				return imthechild(exec_argv_dynamic_ptr[0], &exec_argv_dynamic_ptr[0]);
 				/* Exit from main. */
 			} else {
+				test_glob++;	
 				imtheparent(pid_from_fork, run_in_background);
-        		// munmap(glob_var, sizeof *glob_var);
 				/* Parent will continue around the loop. */
 			}
 
