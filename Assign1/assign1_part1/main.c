@@ -45,6 +45,7 @@ int process_stream(WordCountEntry entries[], int entry_count)
       break;
     //Replace trailing new line character by null character
     buffer[strlen(buffer) - 1] = '\0';
+	//Use strtok to parse multiple words per line
     char*split = strtok(buffer, " \n");
     /* Compare against each entry */
     while(split != NULL){
@@ -85,10 +86,11 @@ int main(int argc, char **argv)
   const char *prog_name = *argv;
   FILE *outs = stdout;
   char *fileName = NULL;
-
+  
+  //Randomize number of available entries 
   srand(time(NULL));
   int size = rand() % 50;
-
+  //Dynamically save entries
   WordCountEntry *entries = malloc(size * sizeof(WordCountEntry));
 
   int entryCount = 0;
@@ -107,6 +109,7 @@ int main(int argc, char **argv)
           printHelp(prog_name);
           break;
         case 'f':
+		  //Get the file name after 'f'
           fileName = (*argv) + 2;
           break;
         default:
