@@ -23,8 +23,8 @@ int imthechild(const char *path_to_exec, char *const args[])
 {
 	return execvp(path_to_exec, args) ? -1 : 0; //use execvp to execute 
 }
-
-void imtheparent(pid_t child_pid, int run_in_background)
+//Change imtheparent to return child_error_code for main function to know if child process failed or not
+int imtheparent(pid_t child_pid, int run_in_background)
 {
 	int child_return_val, child_error_code;
 
@@ -35,7 +35,7 @@ void imtheparent(pid_t child_pid, int run_in_background)
 	if (run_in_background) {
 		fprintf(stderr,
 		        "  Parent says 'run_in_background=1 ... so we're not waiting for the child'\n");
-		return;
+		return 0;
 	}
 	//wait(&child_return_val);
 	waitpid(-1, &child_return_val, 0);
@@ -50,6 +50,7 @@ void imtheparent(pid_t child_pid, int run_in_background)
 		        "  Parent says 'Child process %d failed with code %d'\n",
 		        child_pid, child_error_code);
 	}
+	return child_error_code;
 }
 int isNumber(char*str){
 	int len = strlen(str);
@@ -59,7 +60,7 @@ int isNumber(char*str){
 	return 1;
 }
 
-int test_glob = 0;
+int global_var = 0;
 // static int *glob_var;
 /* MAIN PROCEDURE SECTION */
 int main(int argc, char **argv)
@@ -74,7 +75,7 @@ int main(int argc, char **argv)
 	
 
 	char **argv_store[MAXIMUM_REUSED_COMMAND]; //to store previous argv commands
-	for(int i = 0; i < 9; ++i){
+	for(int i = 0; i < MAXIMUM_REUSED_COMMAND; ++i){
 		argv_store[i] = malloc((SHELL_MAX_ARGS + 1) * sizeof(char*));
 	}
 	/* Entrypoint for the testrunner program */
@@ -140,6 +141,7 @@ int main(int argc, char **argv)
 		/* If Shell runs 'exit' it exits the program. */
 		if (!strcmp(exec_argv[0], "exit")) {
 			printf("Exiting process %d\n", shell_pid);
+			global_var--;
 			return EXIT_SUCCESS;	/* End Shell program */
 
 		} else if (!strcmp(exec_argv[0], "cd") && exec_argc > 1) {
@@ -163,12 +165,12 @@ int main(int argc, char **argv)
 				exec_argv_dynamic_ptr = argv_store[nth_command - 1];
 			}
 			//Handle sub command
-			int check  = 0;
+			int isSubCommand  = 0;
 			if(!strcmp(exec_argv_dynamic_ptr[0], "sub")){
-				check = 1;	
-				exec_argv_dynamic_ptr[0] = "./shell";
-				exec_argv_dynamic_ptr[1] = NULL;
-				if(test_glob == 2){
+				isSubCommand = 1;
+					// printf("global_var=%d\n", global_var);
+
+				if(global_var >= 2){
 					fprintf(stderr, "Too deep!\n");
 					continue;
 				}	
@@ -184,23 +186,29 @@ int main(int argc, char **argv)
 				continue;
 			}
 			if (pid_from_fork == 0) {
-				test_glob++;
-				printf("test_glob=%d\n", test_glob);
-				if(check) continue;
+				
+				if(isSubCommand){
+					global_var++;
+					counter = 1;
+					continue;
+				}
 				return imthechild(exec_argv_dynamic_ptr[0], &exec_argv_dynamic_ptr[0]);
 				/* Exit from main. */
 			} else {
-				test_glob++;	
-				imtheparent(pid_from_fork, run_in_background);
 				/* Parent will continue around the loop. */
+				int child_error_code = imtheparent(pid_from_fork, run_in_background);
+				//If the child failed, do not increment counter
+				if(child_error_code != 0){
+					counter--;	
+				}
 			}
-
+			counter++;	
 		} /* end if */
-		counter++;
+		
 	} /* end while loop */
 
 	//Free dynamic pointers
-	for(int i = 0; i < 9; ++i){
+	for(int i = 0; i < MAXIMUM_REUSED_COMMAND; ++i){
 		argv_store[i] = malloc((SHELL_MAX_ARGS + 1) * sizeof(char*));
 		for(int j = 0; j < SHELL_MAX_ARGS + 1; ++j){
 			free(argv_store[i][j]);

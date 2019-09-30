@@ -1,0 +1,225 @@
+
+======================================== Assign1_part1 =============================================================
+Part 1: Pointers in C
+-------------
+
+1) Consider the following C program.
+#include <string.h>
+int main(int argc, char *argv[])
+{
+  char *temp;
+  strcpy(temp, argv[0]);
+  return 0;
+}
+
+Why is the above code incorrect (i.e., likely to crash)?
+The pointer temp is not allocated with any memory space yet. It's just a pointer variable pointing to some inaccessible memory. 
+
+2) Consider the following C program.
+#include <string.h>
+int main(int argc, char *argv[])
+{
+  char temp[9];
+  strcpy(temp, argv[0]);
+  return 0;
+}
+
+A buffer overflow occurs when the program name is 9 characters long
+(e.g., "12345.exe"). Why?
+Since c string always contain terminating null character '\0' so the name turns out to have 10 characters long
+However, temp can only have 9 characters (including null character) so it causes overflow.
+
+3) Consider the following C program.
+#include <string.h>
+int main(int argc, char *argv[])
+{
+  char *buffer = "Hello";
+  strcpy(buffer, "World");
+  return 0;
+}
+
+Why does this program crash?
+Because buffer pointer is poiting to a string literal which behaves like a static memory space so 
+any attempt to change values in these static memory space will cause program crash
+
+4) Consider the following C snippet.
+void myfunc()
+{
+  char b[100];
+  char *buffer = &b[0];
+  strcpy(buffer, "World");
+}
+
+Is this correct?  What's a simpler expression for &b[0]?
+This is correct. A simpler expression for &b[0] could be &b or just b
+
+5) Consider the following C program.
+#include <stdio.h>
+int main(int argc, char* argv[])
+{
+  printf("%s %s %s\n", *argv, (*(argv+1)) + 2, *(argv+2));
+  return 0;
+}
+
+If this code is executed using the following line, what will be the output?
+> program1 -n5 abc
+Output will be: program1 5 abc
+
+6) Consider the following C program.
+#include <stdio.h>
+#include <string.h>
+char *myfunc(char **argv)
+{
+  char buffer[100];
+  strcpy(buffer, "hello");
+  return buffer;
+}
+int main(int argc, char *argv[])
+{
+  char *s = myfunc(argv);
+  printf("%s\n", s);
+}
+
+What's wrong with this?
+The function myFunc, which is called in main function, is trying to return a static array which will automatically become invalid as soon as it comes out of myFunc. Therefore, the program will have runtime error.
+
+
+
+
+Part 2: Fixing the Bugs
+-------------------------
+
+Understanding the code
+
+  1) Explain why this program uses the exclamation operator with the
+     strcmp() function.
+
+     Here what we want the code to do this logic: 
+        - IF the number of arguments is greater than 1 and the second argument is equal to "-test",
+          then we run the test and terminate program.
+     Hence we want to compare the strings in argv[1] and "-test" using strcmp().
+     if both strings are identical(argv[1] equals "-test"), 
+     strcmp() returns 0, which means !strcmp() returns 1, which is equivalent to be True value 
+     ,therefore, it satisfies the right hand side of if condition.
+
+
+  2) Explain why the 'LENGTH' macro returns the length of an array.
+     Would it work with a pointer to a dynamically allocated array? (Hint:
+     understand sizeof).
+
+     In LENGTH macro:
+        - sizeof(s) returns the memory allocated(bytes) to s. 
+          If s is an array, the returned value is the total size of array.
+        - sizeof(*s) returns the amount of memory allocated to the actual value that s is pointing to.
+          If s is an array, the returned value is the size of the first element (s[0]).
+          It also means the memory size of each value in this array. 
+        Therefore, 
+          sizeof(s)/sizeof(*s) = (size of all elements) / (size of one element) = number of elements 
+     It would not work with a pointer to dynamically allocated array 
+     since in such case sizeof(s) will return the size of pointer s (not the size of array). Size of a pointer
+     is always 8 bytes in 64-bit operating systems or 4 bytes in 34-bit system.
+
+Bug hunting
+
+  3) Explain and fix the logical flow bug within the switch statement.
+     (What happens when the -h option is used?)
+     The switch statement is looking at the second character (after character '-') of user option:  
+          - If the character is 'h: call function printHelp to print out helping statement.
+            There is no break statement inside this case so it will continue to execute codes inside default block 
+          - Default block: print out sentence to indicate invalid option
+     The original code contains a bug inside switch statement since it doesn't break when user enters "-h" and instead the program continues to run the default block and other codes below.
+     The solution is to add break statement right after calling printHelp() inside the first case block.
+
+  4) Explain and fix the argument parsing error. (Why is entrycount never
+     zero?)
+     Entrycount is never zero because:
+        - When entering the first loop, the argv pointer is still pointing to the first argument string which turns out
+        to be "./main". Therefore the code will always execute this block for the first loop:
+          if (entryCount < LENGTH(entries)) {
+            entries[entryCount].word = *argv;
+            entries[entryCount++].counter = 0;
+          }
+        since the entryCount is initialized as 0 so it satisfies the if condition,
+        therefore, it increases the entryPoint by one after running this line "entries[entryCount++].counter = 0;"
+        As a result, the entryPoint is alwaysed increased to 1 after the first loop no matter how many words a user enters
+     Solution:
+        - Increase argv pointer by one so that it points to the actual entered word before going into the while loop (above the while statment)
+  5) Fix print_result() to print results correctly and in the same order
+     as the words were specified on the command line.  Explain your solution.
+     - The current print_result() is now only printing out in the reverse order. 
+     - Fixed print_result() looks like: 
+        void print_result(WordCountEntry entries[], int entry_count)
+        {
+          printf("Result:\n");
+          int i = 0;
+          while (i < entry_count) {
+            printf("%s:%d\n", entries[i].word, entries[i].counter);
+            i++;
+          }
+        }
+        In order to print results in correct order, it iterates through entries array
+        from 0 to the entry_count - 1 index and for each element, print out its word and counter.
+
+======================================== Assign1_part2 =============================================================
+
+
+
+Answering Questions
+==================
+
+  1. Why is it necessary to implement a change directory 'cd' command in
+     the shell?  Could it be implemented by an external program instead?
+     - It's necessary since it allows our shell to navigate through directories at current shell and therefore allows
+     different actions on each directory like create/modify/delete/execute files. 
+     - Yes, it used to be implemented by an external program but now it's a shell builtin. 
+
+
+  2. Explain how our sample shell implements the change directory command.
+     - Our shell uses chdir() to change the current directory of calling process
+
+
+  3. What would happen if this program did not use the fork function, but
+     just used execv directly?  (Try it!)
+
+     - If the program did not use fork() and used execv() directly, 
+     it would replace the current process with a whole new process which executes the command as a new program and once the execution finished, it terminates. 
+
+  4. Explain what the return value of fork() means and how this program
+     uses it.
+
+     - If fork() executes successfully, it returns PID of child process to the parent, and 0 to the child.
+     - If error occurs, it returns -1 to the parent.
+     - The shell program uses fork() to create child processes in order to execute shell command by using execv()
+
+  5. What would happen if fork() were called prior to chdir(), and chdir()
+     invoked within the forked child process?  (Try it!)
+
+     - If fork() were called prior to chdir() like above, the chdir() will be invoked inside
+     child process which means it will only change the directory for child process and has no change
+     on current working directory of parent process.
+
+
+  6. Can you run multiple versions of ./b.sh in the background?
+     What happens to their output?
+      - We can run multiple versions of ./b.sh in the background
+      - Suppose we run 2 versions at the same time, their outputs will have different PID
+
+  7. Can you execute a second instance of our shell from within our shell
+     program (use './shell')?  Which shell receives your input?
+      - The second shell replaces the current shell and receives the input
+
+  8. What happens if you type CTRL-C while the countdown script ./b.sh is
+     running?  What if ./b.sh is running in the background?
+      - If we type CTRL-C when running ./b.sh, it will terminate the script right away
+      - If we type CTRL-C when running ./b.sh in the background, it will not terminate and just keeps running till the end.
+  9. Can a shell kill itself?  Can a shell within a shell kill the parent
+     shell?
+
+     - A shell can kill itself and also can kill the parent shell.
+  10. What happens to background processes when you exit from the shell?
+      Do they continue to run?  Can you see them with the 'ps' command?
+
+      - Yes they do continue to run until they finish. We can still see them with ps command.
+
+
+
