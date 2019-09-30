@@ -202,7 +202,8 @@ Answering Questions
   6. Can you run multiple versions of ./b.sh in the background?
      What happens to their output?
       - We can run multiple versions of ./b.sh in the background
-      - Suppose we run 2 versions at the same time, their outputs will have different PID
+      - Suppose we run 2 versions at the same time, their outputs will have different PID and both of the outputs
+      will be printed out parallely
 
   7. Can you execute a second instance of our shell from within our shell
      program (use './shell')?  Which shell receives your input?

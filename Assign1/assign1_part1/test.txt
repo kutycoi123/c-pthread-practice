@@ -1,4 +1,0 @@
-Looking for 2 words
-Result:
-abc:1
-def:1

@@ -122,8 +122,8 @@ int run_smp1_tests(int argc, char **argv)
 		{ "counter", "smp1", test_counter },
 		{ "path",    "smp1", test_path    } };
 	int result = run_testrunner(argc, argv, tests, sizeof(tests) / sizeof (testentry_t));
-	//unlink("smp1.in");
-	//unlink("smp1.out");
-	//unlink("smp1.err");
+	unlink("smp1.in");
+	unlink("smp1.out");
+	unlink("smp1.err");
 	return result;
 }

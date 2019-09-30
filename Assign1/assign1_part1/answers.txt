@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 }
 
 Why is the above code incorrect (i.e., likely to crash)?
-The pointer temp is not allocated with any memory space yet. It's just a pointer variable pointing to nowhere. 
+The pointer temp is not allocated with any memory space yet. It's just a pointer variable pointing to inaccessible memory. 
 
 2) Consider the following C program.
 #include <string.h>
