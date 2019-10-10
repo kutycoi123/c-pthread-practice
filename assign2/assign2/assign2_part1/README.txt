@@ -21,6 +21,7 @@ Before you edit the code, read through it, and answer these questions:
 
   3) Explain exactly what is the type of 'fp' in the following declaration:
        void *(*fp)(void *)
+      - fp is a function pointer, pointing to a function returning a void pointer (void*)
 
 
 Part II

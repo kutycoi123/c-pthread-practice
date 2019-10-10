@@ -1,6 +1,6 @@
 CC = gcc
 CCOPTS = -c -g -Wall -ggdb 
-LINKOPTS = -g -lpthread
+LINKOPTS = -g -pthread
 
 all: enzyme
 
