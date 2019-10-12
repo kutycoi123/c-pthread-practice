@@ -16,9 +16,10 @@ Before you edit the code, read through it, and answer these questions:
 
   1) Briefly explain why this application would be difficult to write using
      multiple processes instead of threads.
-
+     - Because it's really difficult for multiple processes to share resources. Using thread makes accessing to shared resources easier 
+     and helps to avoid significant issues like deadlock, lifelock, etc.
   2) What is the significance of 'workperformed'?  How is it used?
-
+      - Workperformed is used to make threads keep running to sort the string if it's not sorted yet
   3) Explain exactly what is the type of 'fp' in the following declaration:
        void *(*fp)(void *)
       - fp is a function pointer, pointing to a function returning a void pointer (void*)

@@ -17,37 +17,25 @@ void *run_enzyme(void *data) {
 		If "use_yield" is nonzero then call pthread_yield at the end of the loop.
 	7. Return a pointer to the updated structure.
 	*/
-	
-	// if(proc_string[0] == 'C')
-	// 	pthread_cancel();
-	// printf("%s\n", casted_data->string);
+	thread_info_t* casted_data = (thread_info_t*)data; //1
+	char* proc_str = casted_data->string;
+	if(proc_str[0] == 'C')
+		pthread_cancel(pthread_self());
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-	while(1) {
-			// sched_yield();
-			// printf("before = %s\n", ((thread_info_t*)data)->string);
-			thread_info_t* casted_data = (thread_info_t*)data; //1
-			int swapcount = 0; //2
-			char* proc_string = casted_data->string;
-			int n = strlen(casted_data->string);
-			for(int i = 0 ; i < n-1; ++i){
-				if(proc_string[i] > proc_string[i+1]){
-					char temp = proc_string[i];
-					proc_string[i] = proc_string[i+1];
-					proc_string[i+1] = temp;
-					workperformed = 1;
-					swapcount++;
-					casted_data->swapcount = swapcount;
-					
-				}
-				if(use_yield){
-					sched_yield();	
-				}
-				
+	while(!please_quit) {
+			//pthread_t current_thread = pthread_self();
+			if(proc_str[0] > proc_str[1]){
+				char tmp = proc_str[0];
+				proc_str[0] = proc_str[1];
+				proc_str[1] = tmp;
+				workperformed = 1;
+				casted_data->swapcount++;
 			}
-			// printf("after = %s\n", casted_data->string);
-			return  (void*)casted_data;
+			if(use_yield){
+				sched_yield();
+			}
 		}
-	return NULL;
+	return  (void*)casted_data;
 	
 	
 }
@@ -82,8 +70,7 @@ int make_enzyme_threads(pthread_t * enzymes, char *string, void *(*fp)(void *)) 
 int join_on_enzymes(pthread_t *threads, int n) {
 	int i;
 	int totalswapcount = 0;
-	int whatgoeshere=0; // just to make the code compile 
-	                    // you will need to edit the code below
+
 	for(i=0;i<n;i++) {
 	    void *status;
 	    int rv = pthread_join(threads[i],&status);
@@ -150,8 +137,8 @@ int smp2_main(int argc, char **argv) {
 	printf("Done creating %d threads.\n",n);
 	
 	pthread_t sleeperid;
-	// pthread_create(&sleeperid,NULL,sleeper_func,(void*)10);
-	// wait_till_done(string,n);
+	// pthread_create(&sleeperid,NULL,sleeper_func,(void*)5);
+	wait_till_done(string,n);
 	please_quit = 1;
 	printf("Joining threads...\n");
 	totalswap = join_on_enzymes(enzymes, n);
