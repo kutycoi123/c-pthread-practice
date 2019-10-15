@@ -50,7 +50,30 @@ int timeToFinish()
     /* be careful: timeToFinish() also accesses buffer */
     return buffer[0] == '.';
 }
-
+/*Find first non-negative integer in buffer
+  Return the index = index of last digit + 1
+*/
+int findInt(char* buffer, int len, int*result, int iter){
+	int intFound = 0, //An integer is found
+		res = -1; //Decimal value of found integer
+	while(iter < len){
+		int checkNumeric = isNumeric(buffer[iter]);
+		if( checkNumeric && !intFound){
+			intFound = 1;
+			res = buffer[iter] - '0';
+		}else if(checkNumeric){
+			res = res * 10 + res;
+		}else if(!checkNumeric && intFound){
+			break;
+		}
+		iter++;
+	}
+	*result = res;
+	if(!intFound){
+		return -1;
+	}
+	return iter;
+}
 /* Looks for an addition symbol "+" surrounded by two numbers, e.g. "5+6"
    and, if found, adds the two numbers and replaces the addition subexpression 
    with the result ("(5+6)*8" becomes "(11)*8")--remember, you don't have
@@ -62,29 +85,63 @@ void *adder(void *arg)
     int startOffset, remainderOffset;
     int i;
 
-    return NULL; /* remove this line */
+    //return NULL; /* remove this line */
 
     while (1) {
-	startOffset = remainderOffset = -1;
-	value1 = value2 = -1;
+		startOffset = remainderOffset = -1;
+		value1 = value2 = -1;
 
-	if (timeToFinish()) {
-	    return NULL;
-	}
+		if (timeToFinish()) {
+		    return NULL;
+		}
+		//printf("In adder: buffer = %s\n", buffer);
+		/* storing this prevents having to recalculate it in the loop */
+		bufferlen = strlen(buffer);
+		for (i = 0; i < bufferlen; i++) {
+		    // do we have value1 already?  If not, is this a "naked" number?
+		    if(isNumeric(buffer[i])){
+		    	//printf("Here1\n");
+			    if(value1 != -1){
+			    	remainderOffset = findInt(buffer, bufferlen, &value2, i);
+			    	// printf("value2 = %d\n", value2);
+			    	int res = value1 + value2, //Compute add operation	
+			    		j; 
+			    	char resInString[12];
+			    	int2string(res, resInString); //Convert result into string 
+			    	int reslen = strlen(resInString);  
+			    	// for(j = startOffset; j < startOffset + reslen; ++j){
+			    	// 	buffer[j] = resInString[j - startOffset];
+			    	// }
+				    // strcpy(buffer+j, buffer+remainderOffset);
+			    	//printf("new buffer = %s", buffer);
+				    
+				    strcat(resInString, buffer+remainderOffset);
+				    strcpy(buffer+startOffset, resInString);
+				    value1 = value2 = -1;
+				    startOffset = remainderOffset = -1;
 
-	/* storing this prevents having to recalculate it in the loop */
-	bufferlen = strlen(buffer);
+			    	i = j-1;
+			    	continue;
+			    }else{ //Not have value1 yet
 
-	for (i = 0; i < bufferlen; i++) {
-	    // do we have value1 already?  If not, is this a "naked" number?
-	    // if we do, is the next character after it a '+'?
-	    // if so, is the next one a "naked" number?
+			    	startOffset = i;
 
-	    // once we have value1, value2 and start and end offsets of the
-	    // expression in buffer, replace it with v1+v2
-	}
+			    	i = findInt(buffer, bufferlen, &value1, i);
+			    	if(buffer[i] != '+'){ //value1 must be followed by '+'
+			    		startOffset = -1;
+			    		value1 = -1;
+			    	}
+			    	//printf("value1 = %d\n", value1);
+			    }
+			}
+		    // if we do, is the next character after it a '+'?
+		    // if so, is the next one a "naked" number?
 
-	// something missing?
+		    // once we have value1, value2 and start and end offsets of the
+		    // expression in buffer, replace it with v1+v2
+		}
+
+		// something missing?
     }
 }
 
@@ -99,22 +156,64 @@ void *multiplier(void *arg)
     int startOffset, remainderOffset;
     int i;
 
-    return NULL; /* remove this line */
+    //return NULL; /* remove this line */
 
     while (1) {
-	startOffset = remainderOffset = -1;
-	value1 = value2 = -1;
+		startOffset = remainderOffset = -1;
+		value1 = value2 = -1;
 
-	if (timeToFinish()) {
-	    return NULL;
-	}
+		if (timeToFinish()) {
+		    return NULL;
+		}
 
-	/* storing this prevents having to recalculate it in the loop */
-	bufferlen = strlen(buffer);
+		/* storing this prevents having to recalculate it in the loop */
+		bufferlen = strlen(buffer);
 
-	for (i = 0; i < bufferlen; i++) {
-	    // same as adder, but v1*v2
-	}
+		for (i = 0; i < bufferlen; i++) {
+		    // same as adder, but v1*v2
+		    if(isNumeric(buffer[i])){
+			    	//printf("Here1\n");
+				    if(value1 != -1){
+				    	remainderOffset = findInt(buffer, bufferlen, &value2, i);
+				    	// printf("value2 = %d\n", value2);
+				    	int res = value1 * value2, //Compute add operation	
+				    		j; 
+				    	char resInString[BUF_SIZE];
+				    	int2string(res, resInString); //Convert result into string 
+				    	int reslen = strlen(resInString);  
+				    	// printf("res string = %s\n", resInString);
+				    	// printf("Before change buffer = %s\n", buffer);
+				    	// for(j = startOffset; j < startOffset + reslen; ++j){
+				    	// 	buffer[j] = resInString[j - startOffset];
+				    	// }
+				    	strcat(resInString, buffer+remainderOffset);
+				    	// printf("After change and before shift mul buffer = %s\n", buffer);
+
+				    	// printf("In mul remainderOffset = %d\n", remainderOffset);
+				    	// printf("buffer + j = %s\n", buffer + j);
+				    	// printf("buffer + remain = %s\n", buffer + remainderOffset);
+
+				    	strcpy(buffer+startOffset, resInString);
+				    	// printf("After shift buffer = %s\n", buffer);
+
+				    	value1 = value2 = -1;
+				    	startOffset = remainderOffset = -1;
+				    	// printf("new buffer = %s", buffer);
+				    	i = j-1;
+				    	continue;
+				    }else{ //Not have value1 yet
+
+				    	startOffset = i;
+
+				    	i = findInt(buffer, bufferlen, &value1, i);
+				    	if(buffer[i] != '*'){ //value1 must be followed by '+'
+				    		startOffset = -1;
+				    		value1 = -1;
+				    	}
+				    	// printf("value1 = %d\n", value1);
+				    }
+				}
+		}
 
 	// something missing?
     }
@@ -129,7 +228,7 @@ void *degrouper(void *arg)
     int bufferlen;
     int i;
 
-    return NULL; /* remove this line */
+    //return NULL; /* remove this line */
 
     while (1) {
 
@@ -162,36 +261,37 @@ void *sentinel(void *arg)
     int bufferlen;
     int i;
 
-    return NULL; /* remove this line */
+    //return NULL; /* remove this line */
 
     while (1) {
 
-	if (timeToFinish()) {
-	    return NULL;
-	}
-
-	/* storing this prevents having to recalculate it in the loop */
-	bufferlen = strlen(buffer);
-
-	for (i = 0; i < bufferlen; i++) {
-	    if (buffer[i] == ';') {
-		if (i == 0) {
-		    printErrorAndExit("Sentinel found empty expression!");
-		} else {
-		    /* null terminate the string */
-		    numberBuffer[i] = '\0';
-		    /* print out the number we've found */
-		    fprintf(stdout, "%s\n", numberBuffer);
-		    /* shift the remainder of the string to the left */
-		    strcpy(buffer, &buffer[i + 1]);
-		    break;
+		if (timeToFinish()) {
+		    return NULL;
 		}
-	    } else if (!isNumeric(buffer[i])) {
-		break;
-	    } else {
-		numberBuffer[i] = buffer[i];
-	    }
-	}
+
+		/* storing this prevents having to recalculate it in the loop */
+		bufferlen = strlen(buffer);
+		// printf("In sentinel: buffer = %s\n", buffer);
+
+		for (i = 0; i < bufferlen; i++) {
+		    if (buffer[i] == ';') {
+			if (i == 0) {
+			    printErrorAndExit("Sentinel found empty expression!");
+			} else {
+			    /* null terminate the string */
+			    numberBuffer[i] = '\0';
+			    /* print out the number we've found */
+			    fprintf(stdout, "%s\n", numberBuffer);
+			    /* shift the remainder of the string to the left */
+			    strcpy(buffer, &buffer[i + 1]);
+			    break;
+			}
+		    } else if (!isNumeric(buffer[i])) {
+			break;
+		    } else {
+			numberBuffer[i] = buffer[i];
+		    }
+		}
 
 	// something missing?
     }
@@ -226,12 +326,13 @@ void *reader(void *arg)
 
 	while (free < newlen) {
 		// spinwaiting
+
 	}
 
 	/* we can add another expression now */
 	strcat(buffer, tBuffer);
 	strcat(buffer, ";");
-
+	// printf("%s\n", buffer);
 	/* Stop when user enters '.' */
 	if (tBuffer[0] == '.') {
 	    return NULL;
@@ -259,7 +360,7 @@ int smp3_main(int argc, char **argv)
     pthread_detach(adderThread);
     pthread_detach(degrouperThread);
     pthread_detach(sentinelThread);
-    pthread_detach(readerThread);
+    pthread_join(readerThread, NULL);
 
     /* everything is finished, print out the number of operations performed */
     fprintf(stdout, "Performed a total of %d operations\n", num_ops);
