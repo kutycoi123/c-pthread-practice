@@ -96,8 +96,7 @@ int test_make_enzyme_threads(int argc, char **argv) {
 	    else if (status != NULL) {
 	      c += ((thread_info_t *)status)->swapcount;
 	    }
-	}	
-	printf("Count=%d\n", c);
+	}		
 	quit_if(c != 105);
 	return EXIT_SUCCESS;
 }

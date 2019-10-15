@@ -4,6 +4,11 @@ int please_quit;
 int use_yield;
 int workperformed;
 
+void my_swap(char *c1, char*c2){
+	char temp = *c1;
+	*c1 = *c2;
+	*c2 = temp;
+}
 // The code each enzyme executes.
 void *run_enzyme(void *data) {
 	/* This function should :
@@ -17,20 +22,21 @@ void *run_enzyme(void *data) {
 		If "use_yield" is nonzero then call pthread_yield at the end of the loop.
 	7. Return a pointer to the updated structure.
 	*/
-	thread_info_t* casted_data = (thread_info_t*)data; //1
-	char* proc_str = casted_data->string;
-	if(proc_str[0] == 'C')
+	thread_info_t* casted_data = (thread_info_t*)data; //1.cast void* to thread_info_t*
+	casted_data->swapcount = 0;//2.Initialize the swapcount to 0
+	char* proc_str = casted_data->string; //Get the string
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL); //3. Set cancel type
+	if(proc_str[0] == 'C') //4. Handle cancel condition
 		pthread_cancel(pthread_self());
-	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-	while(!please_quit) {
+	while(!please_quit) { //While not quiting
 			//pthread_t current_thread = pthread_self();
 			if(proc_str[0] > proc_str[1]){
-				char tmp = proc_str[0];
-				proc_str[0] = proc_str[1];
-				proc_str[1] = tmp;
+				//Swap two characters
+				my_swap(proc_str, proc_str + 1);
 				workperformed = 1;
 				casted_data->swapcount++;
 			}
+			//Yield other threads
 			if(use_yield){
 				sched_yield();
 			}
@@ -137,7 +143,7 @@ int smp2_main(int argc, char **argv) {
 	printf("Done creating %d threads.\n",n);
 	
 	pthread_t sleeperid;
-	// pthread_create(&sleeperid,NULL,sleeper_func,(void*)5);
+	pthread_create(&sleeperid,NULL,sleeper_func,(void*)5);
 	wait_till_done(string,n);
 	please_quit = 1;
 	printf("Joining threads...\n");
