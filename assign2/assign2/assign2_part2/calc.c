@@ -66,7 +66,7 @@ int findInt(char* buffer, int len, int*result, int iter){
 			intFound = 1;
 			res = buffer[iter] - '0';
 		}else if(checkNumeric){
-			res = res * 10 + res;
+			res = res * 10 + buffer[iter] - '0';
 		}else if(!checkNumeric && intFound){
 			break;
 		}
@@ -112,7 +112,7 @@ void *adder(void *arg)
 		    	//printf("Here1\n");
 			    if(value1 != -1){
 			    	remainderOffset = findInt(buffer, bufferlen, &value2, i);
-			    	// printf("value2 = %d\n", value2);
+
 			    	int res = value1 + value2; //Compute add operation	
 			    	char resInString[BUF_SIZE];
 			    	int2string(res, resInString); //Convert result into string 
@@ -120,6 +120,8 @@ void *adder(void *arg)
 
 				    strcat(resInString, buffer+remainderOffset);
 				    strcpy(buffer+startOffset, resInString);
+				    // printf("value2 = %d\n", value2);
+			    	// printf("Buffer after addition = %s\n", buffer);
 				    if(pthread_mutex_lock(&lock_1) != 0){  //Lock the shared resources
 						printErrorAndExit("In adder: lock ops failed\n");
 					}
@@ -135,9 +137,10 @@ void *adder(void *arg)
 			    	startOffset = i;
 
 			    	i = findInt(buffer, bufferlen, &value1, i);
+			    	// printf("value1 = %d\n", value1);
 			    	if(i != -1 && buffer[i] != '+'){ //value1 must be followed by '+'
 			    		startOffset = -1;
-			    		value1 = -1;
+			    		value1 = value2 = -1;
 			    	}
 			    	//printf("value1 = %d\n", value1);
 			    }
@@ -320,7 +323,7 @@ void *sentinel(void *arg)
 			pthread_mutex_unlock(&lock);
 		    return NULL;
 		}
-		//printf("Buffer = %s\n", buffer);
+		// printf("Buffer = %s\n", buffer);
 		
 		/* storing this prevents having to recalculate it in the loop */
 		bufferlen = strlen(buffer);
