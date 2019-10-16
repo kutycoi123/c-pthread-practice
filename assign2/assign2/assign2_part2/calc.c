@@ -8,6 +8,7 @@ pthread_t multiplierThread;
 pthread_t readerThread;
 pthread_t sentinelThread;
 
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 char buffer[BUF_SIZE];
 int num_ops;
 
@@ -94,9 +95,12 @@ void *adder(void *arg)
 		if (timeToFinish()) {
 		    return NULL;
 		}
-		//printf("In adder: buffer = %s\n", buffer);
+		if(pthread_mutex_lock(&lock) != 0){  //Lock the shared resources
+			printErrorAndExit("In adder: lock failed\n");
+		}
 		/* storing this prevents having to recalculate it in the loop */
 		bufferlen = strlen(buffer);
+
 		for (i = 0; i < bufferlen; i++) {
 		    // do we have value1 already?  If not, is this a "naked" number?
 		    if(isNumeric(buffer[i])){
@@ -109,14 +113,11 @@ void *adder(void *arg)
 			    	char resInString[12];
 			    	int2string(res, resInString); //Convert result into string 
 			    	int reslen = strlen(resInString);  
-			    	// for(j = startOffset; j < startOffset + reslen; ++j){
-			    	// 	buffer[j] = resInString[j - startOffset];
-			    	// }
-				    // strcpy(buffer+j, buffer+remainderOffset);
-			    	//printf("new buffer = %s", buffer);
-				    
+
 				    strcat(resInString, buffer+remainderOffset);
 				    strcpy(buffer+startOffset, resInString);
+
+					num_ops++;
 				    value1 = value2 = -1;
 				    startOffset = remainderOffset = -1;
 
@@ -127,12 +128,15 @@ void *adder(void *arg)
 			    	startOffset = i;
 
 			    	i = findInt(buffer, bufferlen, &value1, i);
-			    	if(buffer[i] != '+'){ //value1 must be followed by '+'
+			    	if(i != -1 && buffer[i] != '+'){ //value1 must be followed by '+'
 			    		startOffset = -1;
 			    		value1 = -1;
 			    	}
 			    	//printf("value1 = %d\n", value1);
 			    }
+			}else if (value1 != -1){
+				value1 = value2 = -1;
+				startOffset = -1;
 			}
 		    // if we do, is the next character after it a '+'?
 		    // if so, is the next one a "naked" number?
@@ -140,8 +144,9 @@ void *adder(void *arg)
 		    // once we have value1, value2 and start and end offsets of the
 		    // expression in buffer, replace it with v1+v2
 		}
-
+		pthread_mutex_unlock(&lock); //Release the shared resource
 		// something missing?
+		sched_yield();
     }
 }
 
@@ -166,55 +171,54 @@ void *multiplier(void *arg)
 		    return NULL;
 		}
 
+		if (pthread_mutex_lock(&lock) != 0)
+			printErrorAndExit("In multiplier: locking failed\n");
+
 		/* storing this prevents having to recalculate it in the loop */
 		bufferlen = strlen(buffer);
-
+		//printf("Befter degrouping: %s\n", buffer);
 		for (i = 0; i < bufferlen; i++) {
 		    // same as adder, but v1*v2
 		    if(isNumeric(buffer[i])){
 			    	//printf("Here1\n");
-				    if(value1 != -1){
-				    	remainderOffset = findInt(buffer, bufferlen, &value2, i);
-				    	// printf("value2 = %d\n", value2);
-				    	int res = value1 * value2, //Compute add operation	
-				    		j; 
-				    	char resInString[BUF_SIZE];
-				    	int2string(res, resInString); //Convert result into string 
-				    	int reslen = strlen(resInString);  
-				    	// printf("res string = %s\n", resInString);
-				    	// printf("Before change buffer = %s\n", buffer);
-				    	// for(j = startOffset; j < startOffset + reslen; ++j){
-				    	// 	buffer[j] = resInString[j - startOffset];
-				    	// }
-				    	strcat(resInString, buffer+remainderOffset);
-				    	// printf("After change and before shift mul buffer = %s\n", buffer);
+				if(value1 != -1){
+				   	remainderOffset = findInt(buffer, bufferlen, &value2, i);
+				   	// printf("value2 = %d\n", value2);
+				    int res = value1 * value2, //Compute add operation	
+				    	j; 
+				    char resInString[BUF_SIZE];
+			    	int2string(res, resInString); //Convert result into string 
+			    	int reslen = strlen(resInString);  
 
-				    	// printf("In mul remainderOffset = %d\n", remainderOffset);
-				    	// printf("buffer + j = %s\n", buffer + j);
-				    	// printf("buffer + remain = %s\n", buffer + remainderOffset);
+			    	strcat(resInString, buffer+remainderOffset);
+			    	strcpy(buffer+startOffset, resInString);
+					
+					num_ops++;
+			    	value1 = value2 = -1;
+			    	startOffset = remainderOffset = -1;
+			    	// printf("new buffer = %s", buffer);
+			    	i = j-1;
+			    	continue;
+			    }else{ //Not have value1 yet
 
-				    	strcpy(buffer+startOffset, resInString);
-				    	// printf("After shift buffer = %s\n", buffer);
+			    	startOffset = i;
 
-				    	value1 = value2 = -1;
-				    	startOffset = remainderOffset = -1;
-				    	// printf("new buffer = %s", buffer);
-				    	i = j-1;
-				    	continue;
-				    }else{ //Not have value1 yet
-
-				    	startOffset = i;
-
-				    	i = findInt(buffer, bufferlen, &value1, i);
-				    	if(buffer[i] != '*'){ //value1 must be followed by '+'
-				    		startOffset = -1;
-				    		value1 = -1;
-				    	}
-				    	// printf("value1 = %d\n", value1);
-				    }
-				}
+			    	i = findInt(buffer, bufferlen, &value1, i);
+			    	if(buffer[i] != '*'){ //value1 must be followed by '+'
+			    		startOffset = -1;
+			    		value1 = -1;
+			    	}
+			    	// printf("value1 = %d\n", value1);
+			    }
+			} else if (value1 != -1){
+				value1 = value2 = -1;
+				startOffset = remainderOffset = -1;
+			}
 		}
 
+		//printf("After degrouping: %s\n", buffer);
+		pthread_mutex_unlock(&lock);
+		sched_yield();
 	// something missing?
     }
 }
@@ -232,20 +236,40 @@ void *degrouper(void *arg)
 
     while (1) {
 
-	if (timeToFinish()) {
-	    return NULL;
-	}
-
-	/* storing this prevents having to recalculate it in the loop */
-	bufferlen = strlen(buffer);
-
-	for (i = 0; i < bufferlen; i++) {
-	    // check for '(' followed by a naked number followed by ')'
-	    // remove ')' by shifting the tail end of the expression
-	    // remove '(' by shifting the beginning of the expression
-	}
-
+		if (timeToFinish()) {
+		    return NULL;
+		}
+		if (pthread_mutex_lock(&lock) != 0)
+			printErrorAndExit("In degrouper: locking failed\n");
+		/* storing this prevents having to recalculate it in the loop */
+		bufferlen = strlen(buffer);
+		//printf("Befter degrouping: %s\n", buffer);
+		for (i = 0; i < bufferlen; i++) {
+		    // check for '(' followed by a naked number followed by ')'
+		    // remove ')' by shifting the tail end of the expression
+		    // remove '(' by shifting the beginning of the expression
+		    if(buffer[i] == '('){
+		    	int start = i;
+		    	i++;
+		    	while(i < bufferlen && isNumeric(buffer[i])) i++;
+		    	if(i < bufferlen && buffer[i] == ')'){
+		    		int end = i;
+		    		strcpy(buffer+end, buffer+end+1);
+		    		strcpy(buffer+start, buffer+start+1);
+						
+					num_ops++;
+		    		i--;
+					bufferlen-=2;
+		    	}
+				else{
+					i = start;
+				}
+		    }
+		}
+		pthread_mutex_unlock(&lock);
+		//printf("After degrouping: %s\n", buffer);
 	// something missing?
+		sched_yield();
     }
 }
 
@@ -268,7 +292,8 @@ void *sentinel(void *arg)
 		if (timeToFinish()) {
 		    return NULL;
 		}
-
+		if (pthread_mutex_lock(&lock) != 0 )
+			printErrorAndExit("In sentinel: locking failed\n");
 		/* storing this prevents having to recalculate it in the loop */
 		bufferlen = strlen(buffer);
 		// printf("In sentinel: buffer = %s\n", buffer);
@@ -287,13 +312,15 @@ void *sentinel(void *arg)
 			    break;
 			}
 		    } else if (!isNumeric(buffer[i])) {
-			break;
+				break;
 		    } else {
-			numberBuffer[i] = buffer[i];
+				numberBuffer[i] = buffer[i];
 		    }
 		}
+		pthread_mutex_unlock(&lock);
 
 	// something missing?
+		sched_yield();
     }
 }
 
@@ -302,41 +329,46 @@ void *sentinel(void *arg)
 void *reader(void *arg)
 {
     while (1) {
-	char tBuffer[100];
-	int currentlen;
-	int newlen;
-	int free;
+		char tBuffer[100];
+		int currentlen;
+		int newlen;
+		int free;
+		
+		fgets(tBuffer, sizeof(tBuffer), stdin);
 
-	fgets(tBuffer, sizeof(tBuffer), stdin);
+		/* Sychronization bugs in remainder of function need to be fixed */
 
-	/* Sychronization bugs in remainder of function need to be fixed */
 
-	newlen = strlen(tBuffer);
-	currentlen = strlen(buffer);
+		//pthread_mutex_lock(&lock);
 
-	/* if tBuffer comes back with a newline from fgets, remove it */
-	if (tBuffer[newlen - 1] == '\n') {
-	    /* shift null terminator left */
-	    tBuffer[newlen - 1] = tBuffer[newlen];
-	    newlen--;
-	}
+		newlen = strlen(tBuffer);
+		currentlen = strlen(buffer);
 
-	/* -1 for null terminator, -1 for ; separator */
-	free = sizeof(buffer) - currentlen - 2;
+		/* if tBuffer comes back with a newline from fgets, remove it */
+		if (tBuffer[newlen - 1] == '\n') {
+		    /* shift null terminator left */
+		    tBuffer[newlen - 1] = tBuffer[newlen];
+		    newlen--;
+		}
 
-	while (free < newlen) {
-		// spinwaiting
+		/* -1 for null terminator, -1 for ; separator */
+		free = sizeof(buffer) - currentlen - 2;
 
-	}
+		while (free < newlen) {
+			// spinwaiting
 
-	/* we can add another expression now */
-	strcat(buffer, tBuffer);
-	strcat(buffer, ";");
-	// printf("%s\n", buffer);
-	/* Stop when user enters '.' */
-	if (tBuffer[0] == '.') {
-	    return NULL;
-	}
+			//sched_yield();
+		}
+
+		/* we can add another expression now */
+		strcat(buffer, tBuffer);
+		strcat(buffer, ";");
+		// printf("%s\n", buffer);
+		/* Stop when user enters '.' */
+		//pthread_mutex_unlock(&lock);
+		if (tBuffer[0] == '.') {
+		    return NULL;
+		}
     }
 }
 
@@ -359,8 +391,8 @@ int smp3_main(int argc, char **argv)
     pthread_detach(multiplierThread);
     pthread_detach(adderThread);
     pthread_detach(degrouperThread);
-    pthread_detach(sentinelThread);
-    pthread_join(readerThread, NULL);
+    pthread_detach(readerThread);
+    pthread_join(sentinelThread, NULL);
 
     /* everything is finished, print out the number of operations performed */
     fprintf(stdout, "Performed a total of %d operations\n", num_ops);
