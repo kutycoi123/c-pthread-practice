@@ -114,7 +114,7 @@ void *adder(void *arg)
 			    	remainderOffset = findInt(buffer, bufferlen, &value2, i);
 			    	// printf("value2 = %d\n", value2);
 			    	int res = value1 + value2; //Compute add operation	
-			    	char resInString[12];
+			    	char resInString[BUF_SIZE];
 			    	int2string(res, resInString); //Convert result into string 
 			    	int reslen = strlen(resInString);  
 
