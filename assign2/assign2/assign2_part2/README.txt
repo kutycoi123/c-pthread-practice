@@ -119,13 +119,20 @@ then check that there are "naked" numbers to the left and right.
 Q1: At this point, your solution does not contain any synchronization or
 mutual exclusion.  Give an example of and explain a possible
 synchronization error that could occur in this code. Be specific.
-
+	- Suppose the buffer is now: (1+2)+(2*3);
+	- Adder and multiplier are running concurrently and both of them get access to buffer
+	When the adder are trying to add 1+2 and replace (1+2) by (3) the multiplier is also doing
+	multiplication and trying to modify the buffer. 
+	=> This would cause synchronization error since if the adder finished its job first, the buffer 
+	is already changed and multiplier would end up trying to modified old version of buffer.
 Q2: Suppose we implement correct synchronization and mutual exclusion
 for all of the threads.  If our three functions were to operate on all
 expression in the buffer at once (not just the first expression), would
 the program generate incorrect output?  Why or why not?
-
-
+	- With correct synchronization and mutex, the program should not generate incorrect output
+	since now although all threads are working on the same shared resources, only one
+	thread can use the resource to read/write, other threads need to wait for resources to be available.
+	Therefore, the synchronization is maintained all the times. 
 Step 3: Critical Sections
 -------------------------
 
@@ -147,15 +154,23 @@ synchronization errors (e.g., race conditions, data corruption).
 
 Q3: For this step, what specific data structure(s) need(s) protection?
 Why?
-
+	- The data structure that needs protection is an char array(buffer).
+	Since buffer is the main shared resource among threads, all threads will be working on buffer
+	to compute the expression
 Q4: What would happen if you had a busy-wait within one of your critical
 sections?  What if it is a loop with sched_yield()?
-
+	- Then that thread would be waiting for other threads to process the expression until
+	it can continue to work. 
 Q5: Why is it sometimes necessary to use the non-blocking
 pthread_mutex_trylock() instead of the blocking pthread_mutex_lock()?
 Think for example of a program that needs to acquire multiple mutexes at
 the same time.
-
+	- It's sometimes necessary to use non-blocking pthread_mutex_trylock() since
+	we don't want our thread to be blocked when the mutex is locked by other threads.
+	Let's say we have some threads that are doing multiple jobs on different resources.
+	If one of the resources is locked by other threads, using pthread_mutex_lock() will cause this
+	thread to be locked until that resource is available. On the other hand, using pthread_mutex_trylock()
+	will let this thread continue to work on other resources which are not locked by any threads. 
 
 Step 4: Accounting
 ------------------
@@ -170,7 +185,9 @@ this variable is free from race conditions.
 Q6: Is a new mutex, separate from what you have in Step 3, required to
 correctly implement this behavior?  Why or why not?
 
-
+	- It's required to implement correctly since this new mutex is also shared among
+	threads, therefore, reading/writing to this resource needs to be done consistently.
+	Only one thread should be able to get access to this resource at a time. 
 Step 5: Performance
 -------------------
 
@@ -181,13 +198,18 @@ sched_yield() calls at the appropriate place inside these loops.
 
 Q7: Why is it important, even on single-processor machines, to keep the
 critical sections as small as possible?
-
+	- On single-processor machines, interrupt can still happen to allow other functions 
+	to be executed. In such case, large critical sections means other functions need to wait
+	long. Therefore, keeping critical sections as small as possible will reduce the wait-time 
+	and speed up the execution. 
 Q8: Why is spin-waiting without yielding usually inefficient?
-
+	- It's because without yielding the thread is doing nothing but still using memory resources, which is
+	really unnecessary and wasting. 
+	It should give up their turn to yield for other threads to be executed. 
 Q9: When might spin-waiting without yielding or blocking actually be
 *more* efficient?
-
-
+	- It might be more efficient if we know that the resources or conditions we are waiting for
+	will be avaliable/satisfied soon
 Step 6: Monitoring Progress
 ---------------------------
 
@@ -232,7 +254,9 @@ one of them fails.
 Q10:  You have to supply an initial value when creating a semaphore.
 Which value should you use to mimic the default functionality of a mutex?
 What would happen if you specified a larger value?
-
+	- In order to mimic the default functionality of a mutex, we need to initial value for a semaphore to be 1
+	- If we specified a larger value, it causes a problem that we allow more than 1 threads to enter their critical sections at a time, since a thread can enter its critical section when semaphore value is positive. 
+	If we set initial value as 1, it means we only want 1 thread to get access to shared resources at a time.
 
 Testing
 -------
