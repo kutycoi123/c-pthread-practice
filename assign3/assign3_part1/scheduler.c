@@ -29,6 +29,11 @@ typedef struct sched_args {
  * necessary to mediate access to the num_workers_remaining variable. */
 static int num_workers_remaining = 0;
 
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+
 /* Procedure implementing a worker thread. */
 static void *worker_proc(void *arg)
 {
@@ -36,6 +41,8 @@ static void *worker_proc(void *arg)
 	worker_args_t *wa = (worker_args_t *) arg;
 
 	/* Compete with other threads to enter the scheduler queue. */
+
+	pthread_mutex_lock(&mutex);
 	wa->ops->enter_sched_queue(&wa->info);
 	printf("Thread %lu: in scheduler queue\n", (unsigned long) wa->thread_id);
 
@@ -44,7 +51,7 @@ static void *worker_proc(void *arg)
 		wa->ops->wait_for_cpu(&wa->info);
 
 		/* Do some meaningless work... */
-		usleep(30000);
+		usleep(3000);
 		printf("Thread %lu: loop %d\n", (unsigned long) wa->thread_id, i);
 
 		/* Let another worker have a chance. */
@@ -57,8 +64,9 @@ static void *worker_proc(void *arg)
 	printf("Thread %lu: exiting\n", (unsigned long) wa->thread_id);
 	wa->ops->leave_sched_queue(&wa->info);
 	num_workers_remaining--;
+	// printf("num_workers_remaining = %d\n", num_workers_remaining);
 	wa->ops->release_cpu(&wa->info);
-
+	pthread_mutex_unlock(&mutex);
 	pthread_exit(0);
 }
 
@@ -74,6 +82,8 @@ static void *sched_proc(void *arg)
 
 	/* Keep scheduling worker threads until we're done. */
 	while (num_workers_remaining > 0) {
+		// printf("num_workers_remaining in proc = %d\n", num_workers_remaining);
+
 		thread_info_t *info = sched_ops->next_worker(queue);
 		/* next_worker() returns NULL if the scheduler queue is empty. */
 		if (info) {
@@ -81,9 +91,12 @@ static void *sched_proc(void *arg)
 			sched_ops->wait_for_worker(queue);
 		} else {
 			/* Wait for someone to enter the queue. */
+			if(num_workers_remaining <= 0)
+				break;
 			sched_ops->wait_for_queue(queue);
 		}
 	}
+
 	printf("Scheduler: done!\n");
 
 	return NULL;
@@ -119,7 +132,7 @@ static worker_args_t *create_workers(worker_thread_ops_t *ops, int thread_count,
 	/* Initialize counter used by sched_proc() to determine when to stop.
 	 * This is safe assuming sched_ops->wait_for_queue() blocks in sched_proc(). */
 	num_workers_remaining = thread_count;
-
+	pthread_mutex_lock(&mutex);
 	for (i = 0; i < thread_count; i++) {
 		int err = 0;
 
@@ -137,7 +150,7 @@ static worker_args_t *create_workers(worker_thread_ops_t *ops, int thread_count,
 		printf("Main: detaching worker thread %lu\n", (unsigned long) argses[i].thread_id);
 		pthread_detach(argses[i].thread_id);
 	}
-
+	pthread_mutex_unlock(&mutex);
 	/* Arguments can only be deallocated when we're sure the worker
 	 * threads are done with them.  And besides, it contains a handy
 	 * list of the thread_info_t's which need to be cleaned up at the
