@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <pthread.h>
+#include <semaphore.h>
 #include <unistd.h>
 
 #include "scheduler.h"
@@ -31,7 +32,8 @@ static int num_workers_remaining = 0;
 
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
+sem_t sem_lock_detach;
+sem_t sem_lock_queue;
 
 
 /* Procedure implementing a worker thread. */
@@ -42,9 +44,11 @@ static void *worker_proc(void *arg)
 
 	/* Compete with other threads to enter the scheduler queue. */
 
-	pthread_mutex_lock(&mutex);
+	sem_wait(&sem_lock_detach);
 	wa->ops->enter_sched_queue(&wa->info);
 	printf("Thread %lu: in scheduler queue\n", (unsigned long) wa->thread_id);
+	//sem_wait(&sem_lock_queue);
+	sem_wait(&wa->info.sched_queue_info->sem_lock_queue);
 
 	for (i = 0; i < wa->iterations; i++) {
 		/* Don't do anything until the scheduler tells us. */
@@ -64,9 +68,10 @@ static void *worker_proc(void *arg)
 	printf("Thread %lu: exiting\n", (unsigned long) wa->thread_id);
 	wa->ops->leave_sched_queue(&wa->info);
 	num_workers_remaining--;
-	// printf("num_workers_remaining = %d\n", num_workers_remaining);
 	wa->ops->release_cpu(&wa->info);
-	pthread_mutex_unlock(&mutex);
+	//sem_post(&sem_lock_queue);
+	sem_post(&wa->info.sched_queue_info->sem_lock_queue);
+	sem_post(&sem_lock_detach);
 	pthread_exit(0);
 }
 
@@ -83,7 +88,6 @@ static void *sched_proc(void *arg)
 	/* Keep scheduling worker threads until we're done. */
 	while (num_workers_remaining > 0) {
 		// printf("num_workers_remaining in proc = %d\n", num_workers_remaining);
-
 		thread_info_t *info = sched_ops->next_worker(queue);
 		/* next_worker() returns NULL if the scheduler queue is empty. */
 		if (info) {
@@ -91,10 +95,12 @@ static void *sched_proc(void *arg)
 			sched_ops->wait_for_worker(queue);
 		} else {
 			/* Wait for someone to enter the queue. */
-			if(num_workers_remaining <= 0)
+			if(num_workers_remaining <= 0){
 				break;
+			}
 			sched_ops->wait_for_queue(queue);
 		}
+		
 	}
 
 	printf("Scheduler: done!\n");
@@ -132,7 +138,7 @@ static worker_args_t *create_workers(worker_thread_ops_t *ops, int thread_count,
 	/* Initialize counter used by sched_proc() to determine when to stop.
 	 * This is safe assuming sched_ops->wait_for_queue() blocks in sched_proc(). */
 	num_workers_remaining = thread_count;
-	pthread_mutex_lock(&mutex);
+	//pthread_mutex_lock(&mutex);
 	for (i = 0; i < thread_count; i++) {
 		int err = 0;
 
@@ -150,7 +156,9 @@ static worker_args_t *create_workers(worker_thread_ops_t *ops, int thread_count,
 		printf("Main: detaching worker thread %lu\n", (unsigned long) argses[i].thread_id);
 		pthread_detach(argses[i].thread_id);
 	}
-	pthread_mutex_unlock(&mutex);
+	//pthread_mutex_unlock(&mutex);
+	for(int i = 0; i < queue->size; ++i)
+		sem_post(&sem_lock_detach);
 	/* Arguments can only be deallocated when we're sure the worker
 	 * threads are done with them.  And besides, it contains a handy
 	 * list of the thread_info_t's which need to be cleaned up at the
@@ -198,6 +206,8 @@ int smp4_main(int argc, const char **argv)
 	sched_impl_t *sched;
 	sched_queue_t queue;
 
+	sem_init(&sem_lock_detach, 0, 0);
+	sem_init(&sem_lock_queue, 0, 1);
 	/* Collect command-line arguments (or exit on error). */
 	if (argc < 4) {
 		print_help(argv[0]);
@@ -241,6 +251,8 @@ int smp4_main(int argc, const char **argv)
 	/* Clean up our resources. */
 	clean_up(sched, thread_count, argses, &queue);
 
+	sem_destroy(&sem_lock_detach);
+	sem_destroy(&sem_lock_queue);
 	/* This will wait for all other threads. */
 	pthread_exit(0);
 }
