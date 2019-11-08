@@ -46,12 +46,12 @@ static void *worker_proc(void *arg)
 	wa->info.thread_id = wa->thread_id;
 	sem_wait(&init_workers_lock);
 
-	sem_wait(&detach_workers_lock);
+	// sem_wait(&detach_workers_lock);
 
 	wa->ops->enter_sched_queue(&wa->info);
 	printf("Thread %lu: in scheduler queue\n", (unsigned long) wa->thread_id);
 
-	sem_post(&detach_workers_lock);
+	// sem_post(&detach_workers_lock);
 
 	sem_post(&init_workers_lock);
 
@@ -104,9 +104,9 @@ static void *sched_proc(void *arg)
 			sched_ops->wait_for_worker(queue);
 		} else {
 			/* Wait for someone to enter the queue. */
-			if(num_workers_remaining <= 0){
-				break;
-			}
+			// if(num_workers_remaining <= 0){
+			// 	break;
+			// }
 			sched_ops->wait_for_queue(queue);
 		}
 		

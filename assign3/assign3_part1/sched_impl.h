@@ -20,6 +20,9 @@ struct sched_queue {
 	list_elem_t* exec_thread_node;
 	sem_t cpu_lock;
 	sem_t empty_queue_lock;
+	
+	sem_t queue_sem;
+	pthread_mutex_t	queue_lock;
 };
 
 #endif /* __SCHED_IMPL__H__ */
