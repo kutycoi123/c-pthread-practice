@@ -40,8 +40,9 @@ static void wait_for_queue();
  * This function is called every time the thread is suspended.
  */
 void update_run_time(thread_info_t *info) {
-        /* TODO: implement this function */
-	//info->quanta -= QUANTUM; 
+    /* TODO: implement this function */
+	clock_gettime(CLOCK_REALTIME, &info->suspend_time);
+	info->run_time = time_difference(&info->suspend_time, &info->resume_time);
 }
 
 /* 
@@ -50,6 +51,8 @@ void update_run_time(thread_info_t *info) {
  */
 void update_wait_time(thread_info_t *info) {
         /* TODO: implement this function */
+	clock_gettime(CLOCK_REALTIME, &info->resume_time);
+	info->wait_time = time_difference(&info->resume_time, &info->suspend_time);
 }
 
 
@@ -77,7 +80,7 @@ static void resume_worker(thread_info_t *info)
 	/*
 	 * TODO: signal the worker thread that it can resume 
 	 */
-	pthread_kill(info->thrid, SIGCONT);
+	pthread_kill(info->thrid, SIGUSR2);
 	/* update the wait time for the thread */
 	update_wait_time(info);
 
@@ -284,7 +287,8 @@ static void create_workers(int thread_count, int *quanta)
 		pthread_detach(info->thrid);
 
 		/* TODO: initialize the time variables for each thread for performance evalution*/
-
+		info->run_time = 0;
+		info->wait_time = 0;
 	}
 }
 

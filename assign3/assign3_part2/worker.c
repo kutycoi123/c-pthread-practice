@@ -30,6 +30,11 @@ void suspend_thread()
 	printf("Thread %u: suspending.\n", (unsigned int)pthread_self());
 
 	/*add your code here to wait for a resume signal from the scheduler*/
+	sigset_t wait_signal;
+	sigemptyset(&wait_signal);
+	sigaddset(&wait_signal, SIGUSR2);
+	int sig_num;
+	sigwait(&wait_signal, &sig_num);
 	
 	printf("Thread %u: resuming.\n",(unsigned int) pthread_self());
 }
@@ -86,9 +91,20 @@ void *start_worker(void *arg)
 	float calc = 0.8;
 	int j = 0;
 
+	sigset_t blocked_signals;
+	sigemptyset(&blocked_signals);
+	sigaddset(&blocked_signals, SIGALRM);
+	sigaddset(&blocked_signals, SIGUSR2);
+	
+	sigset_t unblock_signals;
+	sigemptyset(&unblock_signals);
+	sigaddset(&unblock_signals, SIGUSR1);
+	sigaddset(&unblock_signals, SIGTERM);
 	/* TODO: Block SIGALRM and SIGUSR2. */
-	 
+
+	pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
 	/* TODO: Unblock SIGUSR1 and SIGTERM. */
+	pthread_sigmask(SIG_UNBLOCK, &unblock_signals, NULL);
 
 
 	/* compete with other threads to enter queue. */
