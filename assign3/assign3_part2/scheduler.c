@@ -41,6 +41,7 @@ static void wait_for_queue();
  */
 void update_run_time(thread_info_t *info) {
         /* TODO: implement this function */
+	//info->quanta -= QUANTUM; 
 }
 
 /* 
@@ -63,6 +64,7 @@ static void init_sched_queue(int queue_size)
 	pthread_mutex_init(&sched_queue.lock, NULL);
 
 	/* TODO: initialize the timer */
+	timer_create(CLOCK_REALTIME, NULL, &timer);
 }
 
 /*
@@ -75,7 +77,7 @@ static void resume_worker(thread_info_t *info)
 	/*
 	 * TODO: signal the worker thread that it can resume 
 	 */
-
+	pthread_kill(info->thrid, SIGCONT);
 	/* update the wait time for the thread */
 	update_wait_time(info);
 
@@ -86,6 +88,7 @@ void cancel_worker(thread_info_t *info)
 {
 
 	/* TODO: send a signal to the thread, telling it to kill itself*/
+	pthread_kill(info->thrid, SIGTERM);
 
 	/* Update global wait and run time info */
 	wait_times += info->wait_time;
@@ -117,14 +120,15 @@ static void suspend_worker(thread_info_t *info)
 	update_run_time(info);
 
 	/* TODO: Update quanta remaining. */
-
+	info->quanta -= QUANTUM;
+	whatgoeshere = info->quanta;
 	/* TODO: decide whether to cancel or suspend thread */
 	if(whatgoeshere) {
 	  /*
 	   * Thread still running: suspend.
 	   * TODO: Signal the worker thread that it should suspend.
 	   */
-
+		pthread_kill(info->thrid, SIGUSR1);
 	  /* Update Schedule queue */
 	  list_remove(&sched_queue,info->le);
 	  list_insert_tail(&sched_queue,info->le);
@@ -182,12 +186,31 @@ void timer_handler()
  * TODO: Implement this function.
  */
 void setup_sig_handlers() {
+	struct sigaction SIGALRM_handler;
+	struct sigaction SIGTERM_handler;
+	struct sigaction SIGUSR1_handler;
 
 	/* Setup timer handler for SIGALRM signal in scheduler */
 
+	SIGALRM_handler.sa_handler = &timer_handler;
+	sigemptyset(&(SIGALRM_handler.sa_mask));
+	SIGALRM_handler.sa_flags = 0;
+	sigaction(SIGALRM,&SIGALRM_handler,NULL);
+
 	/* Setup cancel handler for SIGTERM signal in workers */
 
+	SIGTERM_handler.sa_handler = &cancel_thread;
+	sigemptyset(&(SIGTERM_handler.sa_mask));
+	SIGTERM_handler.sa_flags = 0;
+	sigaction(SIGTERM,&SIGTERM_handler,NULL);
+
 	/* Setup suspend handler for SIGUSR1 signal in workers */
+
+	SIGUSR1_handler.sa_handler = &suspend_thread;
+	sigemptyset(&(SIGUSR1_handler.sa_mask));
+	SIGUSR1_handler.sa_flags = 0;
+	sigaction(SIGUSR1,&SIGUSR1_handler,NULL);
+
 
 }
 
@@ -273,7 +296,14 @@ static void *scheduler_run(void *unused)
 	wait_for_queue();
 
 	/* TODO: start the timer */
+	struct itimerspec value;
+	value.it_value.tv_sec = QUANTUM;
+	value.it_value.tv_nsec = 0;
 
+	value.it_interval.tv_sec = QUANTUM;
+	value.it_interval.tv_nsec = 0;
+
+	timer_settime(timer, 0, &value, NULL);
 	/*keep the scheduler thread alive*/
 	while( !quit )
 		sched_yield();
