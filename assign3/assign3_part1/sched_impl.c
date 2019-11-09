@@ -6,91 +6,71 @@
 #include "list.h"
 /* Fill in your scheduler implementation code below: */
 
-
-static unsigned long getThreadId(thread_info_t* t){
-	return (unsigned long)t->thread_id;
-}
-static void _print(list_elem_t* t){
-	// printf("Hello\n");
-	thread_info_t* _t = (thread_info_t*) t->datum;
-	printf("\t%lu\n", getThreadId(_t));
-}
 static void init_thread_info(thread_info_t *info, sched_queue_t *queue)
 {
 	/*...Code goes here...*/
-	info->sched_queue_info = queue;
-	sem_init(&info->sem_lock_thread, 0 , 0);
-	sem_init(&info->thread_exec_lock, 0, 0);
+	info->sched_queue = queue;
+	sem_init(&info->thread_lock, 0, 0);
 }
 
 static void destroy_thread_info(thread_info_t *info)
 {
 	/*...Code goes here...*/
-	info->sched_queue_info = NULL;
-	// free(info->thread_node);
-	info->thread_node = NULL;
+	info->sched_queue = NULL;
+	// free(info->worker_node);
+	info->worker_node = NULL;
 }
 
 static void enter_sched_queue(thread_info_t *info)
 {
+	// Wait until the queue has enough slots
+	sem_wait(&info->sched_queue->queue_size_lock);
+	sched_queue_t* sched_queue = info->sched_queue;
 
-	sem_wait(&info->sched_queue_info->queue_sem);
-	sched_queue_t* sched_queue_info = info->sched_queue_info;
-
-	pthread_mutex_lock(&sched_queue_info->queue_lock);
+	// Lock to operate on queues
+	pthread_mutex_lock(&sched_queue->queue_lock);
 
 	list_elem_t* elem = (list_elem_t*) malloc(sizeof(list_elem_t));
 
 	elem->datum = (void*) info;
 
-	list_insert_tail(sched_queue_info->list_queue, elem);
-	info->thread_node = list_get_tail(sched_queue_info->list_queue);
+	list_insert_tail(sched_queue->worker_queue, elem);
 
-	pthread_mutex_unlock(&sched_queue_info->queue_lock);
+	info->worker_node = list_get_tail(sched_queue->worker_queue);
 
+	// Release locks
+	pthread_mutex_unlock(&sched_queue->queue_lock);
 
-	sem_post(&(sched_queue_info->empty_queue_lock));
 
 }
 static void leave_sched_queue(thread_info_t *info)
 {
 
-	pthread_mutex_lock(&info->sched_queue_info->queue_lock);
+	pthread_mutex_lock(&info->sched_queue->queue_lock);
 
 
-	list_remove_elem(info->sched_queue_info->list_queue, info->thread_node);
+	list_remove_elem(info->sched_queue->worker_queue, info->worker_node);
 
-	info->sched_queue_info->exec_thread_node = NULL;
+	info->sched_queue->current_worker_node = NULL;
 
+	// Make slots for other workers
+	sem_post(&info->sched_queue->queue_size_lock);
 
-	list_foreach(info->sched_queue_info->list_queue, _print);
-
-	sem_post(&info->sched_queue_info->queue_sem);
-
-	pthread_mutex_unlock(&info->sched_queue_info->queue_lock);
-
-
-
+	pthread_mutex_unlock(&info->sched_queue->queue_lock);
 
 	
 }
-static void wait_for_cpu_fifo(thread_info_t *info)
+static void wait_for_cpu(thread_info_t *info)
 {
-
-	sem_wait(&info->thread_exec_lock);
+	// Wait until the thread is unlocked
+	sem_wait(&info->thread_lock);
 
 }
-static void wait_for_cpu_rr(thread_info_t *info)
-{
-	// printf("%lu wait for cpu\n", getThreadId(info));
-	sem_wait(&info->thread_exec_lock);
 
-
-}
 static void release_cpu(thread_info_t *info)
 {	
-	// printf("%lu releasing\n", getThreadId(info));
-	sem_post(&info->sched_queue_info->cpu_lock);
+	// Release cpu_lock for other workers or sheduler to use
+	sem_post(&info->sched_queue->cpu_lock);
 
 
 }
@@ -99,15 +79,13 @@ static void release_cpu(thread_info_t *info)
 static void init_sched_queue(sched_queue_t *queue, int queue_size)
 {
 	/*...Code goes here...*/
-	queue->list_queue = (list_t*) malloc(sizeof(list_t));
-	list_init(queue->list_queue);
+	queue->worker_queue = (list_t*) malloc(sizeof(list_t));
+	list_init(queue->worker_queue);
 	queue->size = queue_size;
-	queue->exec_thread_node = NULL;
+	queue->current_worker_node = NULL;
 	sem_init(&queue->cpu_lock, 0, 0);
-	sem_init(&queue->empty_queue_lock, 0 , 0);
-	sem_init(&queue->queue_sem, 0, queue_size);
+	sem_init(&queue->queue_size_lock, 0, queue_size);
 	pthread_mutex_init(&queue->queue_lock, NULL);
-
 
 }
 
@@ -115,33 +93,29 @@ static void destroy_sched_queue(sched_queue_t *queue)
 {
 	/*...Code goes here...*/
 	list_elem_t *curr;
-	while( (curr = list_get_head(queue->list_queue)) != NULL){
-		list_remove_elem(queue->list_queue, curr);
+	while( (curr = list_get_head(queue->worker_queue)) != NULL){
+		list_remove_elem(queue->worker_queue, curr);
 		free(curr);
 	}
 }
 
 static void wake_up_worker(thread_info_t *info)
 {
-	// info->sched_queue_info->exec_thread_node = info->thread_node;
-	// printf("%lu woke up\n", getThreadId(info));
-	sem_post(&info->thread_exec_lock);
+	// Unlock thread
+	sem_post(&info->thread_lock);
 
 }
 static void wait_for_worker(sched_queue_t *queue)
 {
-
-	// thread_info_t* current_thread = (thread_info_t*) queue->exec_thread_node->datum;
-	// printf("Scheduler waiting\n");
+	// Wait until worker release cpu_lock
 	sem_wait(&queue->cpu_lock);
-	// printf("SCheduler regain control\n");
 }
-
+/* For fifo policy, always pick the worker sitting at the head of queue*/
 static thread_info_t * next_worker_fifo(sched_queue_t *queue)
 {
 	pthread_mutex_lock(&queue->queue_lock);
 
-	list_elem_t* head = list_get_head(queue->list_queue);
+	list_elem_t* head = list_get_head(queue->worker_queue);
 	if(head == NULL){
 		pthread_mutex_unlock(&queue->queue_lock);
 		return NULL;
@@ -151,81 +125,47 @@ static thread_info_t * next_worker_fifo(sched_queue_t *queue)
 	
 	return next_worker_fifo;
 }
-
+/* For rr policy, remove the current worker, move it to the end of queue and pick 
+the worker sitting at the head of queue as next worker*/
 static thread_info_t * next_worker_rr(sched_queue_t *queue)
 {
 
-	// pthread_mutex_lock(&queue->queue_lock);
-
-	// list_elem_t* temp_head = list_get_head(queue->list_queue);
-
-	// if(temp_head == NULL){
-	// pthread_mutex_unlock(&queue->queue_lock);
-
-	// 	return NULL;
-	// }
-	// if(temp_head->next == NULL){
-	// 	pthread_mutex_unlock(&queue->queue_lock);
-
-	// 	return (thread_info_t *)(temp_head->datum);
-	// }
-
-
-	// list_remove_elem(queue->list_queue, temp_head);
-	// list_insert_tail(queue->list_queue, temp_head);
-
-	// temp_head = list_get_head(queue->list_queue);
-	// if(temp_head == NULL){
-	// 	pthread_mutex_unlock(&queue->queue_lock);
-
-	// 	return NULL;
-	// }
-	// thread_info_t * next_worker_fifo = (thread_info_t *)(temp_head->datum);
-
-	// pthread_mutex_unlock(&queue->queue_lock);
-
-	// return next_worker_fifo;
-
-	/*Version 2*/
-
 	pthread_mutex_lock(&queue->queue_lock);
-	// list_foreach(queue->list_queue, _print);
 
-	if(queue->exec_thread_node != NULL){
-		list_remove_elem(queue->list_queue, queue->exec_thread_node);
-		list_insert_tail(queue->list_queue, queue->exec_thread_node);
+	if(queue->current_worker_node != NULL){
+		list_remove_elem(queue->worker_queue, queue->current_worker_node);
+		list_insert_tail(queue->worker_queue, queue->current_worker_node);
 	}
 
-	queue->exec_thread_node = list_get_head(queue->list_queue);
+	queue->current_worker_node = list_get_head(queue->worker_queue);
 
-	if(queue->exec_thread_node == NULL){
+	if(queue->current_worker_node == NULL){
 		pthread_mutex_unlock(&queue->queue_lock);
 		return NULL;
 	}
-	thread_info_t * next_worker_fifo = (thread_info_t *)(queue->exec_thread_node->datum);
+	thread_info_t * next_worker_fifo = (thread_info_t *)(queue->current_worker_node->datum);
 
 	pthread_mutex_unlock(&queue->queue_lock);
-	// printf("Have next worker is %lu\n", getThreadId(next_worker_fifo));
+
 	return next_worker_fifo;
 
 
 }
+
 static void wait_for_queue(sched_queue_t *queue)
 {
-	// printf("Waiting for empty queue\n");
-	sem_wait(&queue->empty_queue_lock);
-	// printf("Have something in queue\n");
-	// while(!list_size(&queue->list_queue)){
-	// 	sched_yield();
-	// }
+	while(!list_size(queue->worker_queue)){
+		sched_yield();
+	}
+
 }
 
-/*...More functions go here...*/
+
 
 /* You need to statically initialize these structures: */
 sched_impl_t sched_fifo = {
-	{ init_thread_info, destroy_thread_info, enter_sched_queue, leave_sched_queue, wait_for_cpu_fifo, release_cpu/*, ...etc... */ }, 
+	{ init_thread_info, destroy_thread_info, enter_sched_queue, leave_sched_queue, wait_for_cpu, release_cpu/*, ...etc... */ }, 
 	{ init_sched_queue, destroy_sched_queue, wake_up_worker, wait_for_worker, next_worker_fifo, wait_for_queue/*, ...etc... */ } },
 sched_rr = {
-	{ init_thread_info, destroy_thread_info, enter_sched_queue, leave_sched_queue, wait_for_cpu_rr, release_cpu, /*...etc...*/  }, 
+	{ init_thread_info, destroy_thread_info, enter_sched_queue, leave_sched_queue, wait_for_cpu, release_cpu, /*...etc...*/  }, 
 	{ init_sched_queue, destroy_sched_queue, wake_up_worker, wait_for_worker, next_worker_rr, wait_for_queue/*, ...etc... */ } };

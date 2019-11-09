@@ -46,12 +46,10 @@ static void *worker_proc(void *arg)
 	wa->info.thread_id = wa->thread_id;
 	sem_wait(&init_workers_lock);
 
-	// sem_wait(&detach_workers_lock);
 
 	wa->ops->enter_sched_queue(&wa->info);
 	printf("Thread %lu: in scheduler queue\n", (unsigned long) wa->thread_id);
 
-	// sem_post(&detach_workers_lock);
 
 	sem_post(&init_workers_lock);
 
@@ -66,13 +64,10 @@ static void *worker_proc(void *arg)
 		/*Let another worker have a chance.*/
 		wa->ops->release_cpu(&wa->info);
 	}
-	// usleep(30000);
 
-	// printf("Just exited loop\n");
 	/* Leave the scheduler queue to make room for someone else
 	 * and decrement the count of remaining threads. */
 	wa->ops->wait_for_cpu(&wa->info);
-	// usleep(30000);
 	
 	printf("Thread %lu: exiting\n", (unsigned long) wa->thread_id);
 	wa->ops->leave_sched_queue(&wa->info);
@@ -96,17 +91,13 @@ static void *sched_proc(void *arg)
 	/* Keep scheduling worker threads until we're done. */
 
 	while (num_workers_remaining > 0) {
-		// printf("num_workers_remaining in proc = %d\n", num_workers_remaining);
 		thread_info_t *info = sched_ops->next_worker(queue);
 		/* next_worker() returns NULL if the scheduler queue is empty. */
 		if (info) {
 			sched_ops->wake_up_worker(info);
 			sched_ops->wait_for_worker(queue);
 		} else {
-			/* Wait for someone to enter the queue. */
-			// if(num_workers_remaining <= 0){
-			// 	break;
-			// }
+
 			sched_ops->wait_for_queue(queue);
 		}
 		
