@@ -56,6 +56,7 @@ int test_file_read(int argc, const char **argv)
     quit_if(IOERR_INVALID_PATH !=
 	    file_read(NO_SUCH_FILE, 0, b, sizeof(b)));
     bytes_read = file_read(HELLO_FILE, 0, b, sizeof(b));
+
     quit_if(bytes_read != 5);
     quit_if(strncmp("Hello", b, 5));
     bytes_read = file_read(HELLO_FILE, 1, b, sizeof(b));
@@ -81,7 +82,7 @@ int test_file_info(int argc, const char **argv)
     char b[255], ftype[2];
     int sz, params;
     long accessed, modified;
-    char fmt[] = "Size:%d Accessed:%d Modified:%d Type %s";
+    char fmt[] = "Size:%d Accessed:%ld Modified:%ld Type %s";
 
     setup();
     // Test invalid arguments
@@ -90,14 +91,13 @@ int test_file_info(int argc, const char **argv)
     quit_if(IOERR_INVALID_ARGS != file_info(NULL, b, sizeof(b)));
 
     // Test stat on old file
-    quit_if(file_info(OLD_FILE, b, sizeof(b)));
+    quit_if(file_info(OLD_FILE, b, sizeof(b)) <= 0);
     params = sscanf(b, fmt, &sz, &accessed, &modified, &ftype);
     quit_if(params != 4);
 
     int one_day = 86400;
     int jan1_2005 = 1104534000;	// seconds since epoch
     int jan3_2005 = jan1_2005 + one_day + one_day;
-
     quit_if(modified < jan1_2005 || modified > jan1_2005 + one_day);
     quit_if(accessed < jan3_2005 || accessed > jan3_2005 + one_day);
     return 0;

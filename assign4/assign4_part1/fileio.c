@@ -7,7 +7,7 @@
 #include <errno.h>
 #include "restart.h"
 #include "fileio.h"
-
+#include "string.h"
 #if 1
 #define VERBOSE(p) (p)
 #else
@@ -43,8 +43,19 @@ int file_read(char *path, int offset, void *buffer, size_t bufbytes)
 int file_info(char *path, void *buffer, size_t bufbytes)
 {
     if (!path || !buffer || bufbytes < 1)
-	return IOERR_INVALID_ARGS;
-    return IOERR_NOT_YET_IMPLEMENTED;
+		return IOERR_INVALID_ARGS;
+	struct stat fileStat;
+
+	if (stat(path, &fileStat) < 0)
+		return IOERR_POSIX; 	
+	int size = fileStat.st_size;
+	long accessed = fileStat.st_atim.tv_sec;
+	long modified = fileStat.st_mtim.tv_sec; 
+	int isDirectory = S_ISDIR(fileStat.st_mode);
+	char type = isDirectory ? 'd' : 'f';
+	
+	sprintf(buffer, "Size:%d Accessed:%ld Modified:%ld Type:%c", size, accessed, modified, type);
+    return 1;
 }
 
 int file_write(char *path, int offset, void *buffer, size_t bufbytes)
