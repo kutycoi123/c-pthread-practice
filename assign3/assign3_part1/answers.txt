@@ -20,7 +20,7 @@ Q 2  Briefly describe the synchronization constructs you needed to implement
      queue and how you made sure only the scheduled thread would run at any
      given time.
 
-     - I create a lock called thread_lock for each thread to indicate when a thread can be executed. When the scheduler is runing, the thread has to wait until scheduler unlocks the thread_lock
+     - I create a lock called thread_lock for each thread to indicate when a thread can be executed. When the scheduler is running, the thread has to wait until scheduler unlocks the thread_lock
      - I create cpu_lock which is used by either scheduler or threads. When a thread is running, the scheduler has to wait until thread releases the cpu_lock. 
 
 Q 3  Why is the dummy scheduling implementation provided potentially
@@ -53,8 +53,7 @@ Q 6  Describe the behavior of exit_error() function in scheduler.c.  Why
      does exit_error() not use errno?
      - It displays error and immediatly exits program
      - It does not use errno since it is designed to display not only errno message but also
-     error returned from other system calls like
-     pthread_create
+     error returned from other system calls like pthread_create
 
 Q 7  Does it matter whether the call to sched_ops->wait_for_queue(queue) in
      sched_proc() actually does anything?  How would it affect correctness
@@ -64,7 +63,7 @@ Q 7  Does it matter whether the call to sched_ops->wait_for_queue(queue) in
      - If it just returned right away, then even though the queue has nothing, the scheduler still keeps
      looking at empty queue and try to get the worker, which may potentially cause some memeory reference problem.
      - I think it may not affect the performance much, in fact it may help the scheduler to save resources since
-     it the scheduler will do nothing until there is some workers in queue. 
+     the scheduler will do nothing until there is some workers in queue. 
 
 
 Q 8  Explain how worker_proc() is able to call the appropriate
@@ -75,7 +74,7 @@ Q 8  Explain how worker_proc() is able to call the appropriate
      - First, once all the threads are detached, the worker threads then try to enter the queue.
      - Workers compete with each other to enter the queue, since the size of queue could be smaller than the 
      total number of workers
-     - As soon as a worker is put into the queue, it executes a loop and calls wait_for_cpu() to wait until 
+     - As soon as a worker enters into the queue, it executes a loop and calls wait_for_cpu() to wait until 
      the scheduler releases a lock(semaphore)
      - The scheduler only releases a lock for a thread when it calls next_worker() and wake_up_worker() functions. Then
      the blocked thread will be unblocked and continue to execute its loop
@@ -104,12 +103,9 @@ Q 10 Explain how you would alter the program to demonstrate the "convoy"
      scheduling in this case using the current implementation in the machine
      problem?
 
-     - I would allow the first worker thread to do a large number of CPU computations and 
-     do intensive I/O processes. For other following workers, I let them do small number of CPU computations
-     and I/O process. Therefore, it will cause the "convoy" method when the small-burst-time workers slow down significantly
-     due to a large-burst-time worker.
+     - I would allow the first worker thread to do a large number of CPU computations(e.g factorial computation) and 
+     For other following workers, I let them do small number of I/O processes(e.g small file I/O). Therefore, it will cause the "convoy" method when the small-burst-time workers slow down significantly due to a large-burst-time worker.
      - It is difficult to show the benefits of Round Robin
      because the workers we are implementing are only non-intensive processor-bound processes
-     which only do simple CPU computations, therefore, the difference between FCFS and Round Robin scheduling 
-     policy is not viewed clearly. 
+     which only do simple CPU computations and all workers have the same amount of computations, therefore, the benefits of Round Robin scheduling policy is not viewed clearly. 
 

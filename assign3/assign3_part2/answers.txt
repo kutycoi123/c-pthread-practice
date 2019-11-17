@@ -2,8 +2,8 @@ Question 1.
 Why do we block SIGUSR2 and SIGALRM in worker.c?  Why do we unblock SIGUSR1 and
 SIGTERM in worker.c?
 - We block SIGUSR2 and SIGALRM in worker.c since these two signals are only used later in program 
-to resume and restart timer for the worker thread. We don't want to handle these signals while the worker is still
-trying to get into the queue
+to resume execution and restart timer for the worker thread. 
+We don't want our worker thread is interrupted by these two signals while the worker is still trying to get into the queue
 - We unblock SIGUSR1 and SIGTERM in worker.c since these two signals can be used to suspend and cancel a thread.
 So it makes sense for us to use these signals to suspend or cancel threads right away even before the thread entering queue.
 
@@ -13,29 +13,29 @@ two. (Please explain from the aspect of thread behavior rather than syntax).
 - sigwait() suspends the current thread until it receives a specific signal
 - sigaction() defines a specific actioner or handler for a specific signal, meaning that 
 we can create our own handler function and use sigaction() to assign this handler function
-for handling a signal. 
+for handling a specific signal. 
 
 Question 3.
 When we use POSIX:TMR interval timer, we are using relative time. What is the
 alternative? Explain the difference between the two.
 - The alternative is absolute time.
 - Difference is that: 
-	+ Relative time is initialized with a expiration time based on the time elapsed,
+	+ Relative time is initialized with a expiration time based on the time elapsed
 	e.g program stops after 10 seconds from its start. 
-	+ Absolute time will expire at a specific date and time,
+	+ Absolute time will expire at a specific date and time
 	e.g program starts at 4:00 AM.
 
 
 Question 4.
 Look at start_worker() in worker.c, a worker thread is executing within an
 infinite loop at the end. When does a worker thread terminate?
-- A worker thread terminates when it's canceled by calling cancel_worker() to send SIGTERM signal,
+- A worker thread terminates when it's canceled by scheduler calling cancel_worker() to send SIGTERM signal,
 then cancel_thread() will be called to handle SIGTERM signal and eventually call pthread_exit() to exit thread.
 
 Question 5.
 When does the scheduler finish?  Why does it not exit when the scheduler queue
 is empty?
-- The scheduler finishes when all worker threads has finished or canceled. It does not exit
+- The scheduler finishes when all worker threads has been finished or canceled. It does not exit
 when the scheduler queue is empty since it has to wait for worker threads to enter the queue. 
 
 
@@ -70,7 +70,7 @@ modify this function.
 move the current worker thread to the end of the queue
 - A small modification would be, instead of moving the current thread to the tail of the queue,
 we will just keep the current worker thread at the head of the queue when it's suspended 
-so that it can continue to run until it's complete finished or canceled. 
+so that it can continue to run until it's completely finished or canceled. 
 
 Question 10.
 In this implementation, the scheduler only changes threads when the time quantum

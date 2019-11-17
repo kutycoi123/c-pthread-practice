@@ -131,7 +131,7 @@ static thread_info_t * next_worker_rr(sched_queue_t *queue)
 {
 
 	pthread_mutex_lock(&queue->queue_lock);
-
+	//Remove current worker from the head of queue
 	if(queue->current_worker_node != NULL){
 		list_remove_elem(queue->worker_queue, queue->current_worker_node);
 		list_insert_tail(queue->worker_queue, queue->current_worker_node);
@@ -139,6 +139,7 @@ static thread_info_t * next_worker_rr(sched_queue_t *queue)
 
 	queue->current_worker_node = list_get_head(queue->worker_queue);
 
+	//If queue is empty
 	if(queue->current_worker_node == NULL){
 		pthread_mutex_unlock(&queue->queue_lock);
 		return NULL;

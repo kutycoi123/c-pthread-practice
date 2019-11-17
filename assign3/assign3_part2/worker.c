@@ -13,6 +13,12 @@
  *
  ******************************************************************************/
 
+void exit_and_free(thread_info_t *info){
+	fprintf(stderr, "failure: %s\n", strerror(errno));
+	free (info);
+	pthread_exit(0);
+}
+
 /* Handler for SIGTERM signal */
 void cancel_thread()
 { 
@@ -92,6 +98,7 @@ void *start_worker(void *arg)
 	thread_info_t *info = (thread_info_t *) arg;
 	float calc = 0.8;
 	int j = 0;
+	int err = 0;
 
 	sigset_t blocked_signals;
 	sigemptyset(&blocked_signals);
@@ -104,10 +111,14 @@ void *start_worker(void *arg)
 	sigaddset(&unblock_signals, SIGTERM);
 
 	/* TODO: Block SIGALRM and SIGUSR2. */
-	pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
+	
+	err = pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
+	if(err != 0)
+		exit_and_free(info);
 	/* TODO: Unblock SIGUSR1 and SIGTERM. */
-	pthread_sigmask(SIG_UNBLOCK, &unblock_signals, NULL);
-
+	err = pthread_sigmask(SIG_UNBLOCK, &unblock_signals, NULL);
+	if(err != 0)
+		exit_and_free(info);
 
 	/* compete with other threads to enter queue. */
 	if (enter_scheduler_queue(info)) {
