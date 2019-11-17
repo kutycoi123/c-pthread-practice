@@ -30,6 +30,7 @@ void suspend_thread()
 	printf("Thread %lu: suspending.\n", (unsigned long)pthread_self());
 
 	/*add your code here to wait for a resume signal from the scheduler*/
+
 	sigset_t wait_signal;
 	sigemptyset(&wait_signal);
 	sigaddset(&wait_signal, SIGUSR2);
@@ -54,6 +55,7 @@ static int enter_scheduler_queue(thread_info_t *info)
 	 * create a new list entry for this thread
 	 * store this thread info in the new entry.
 	 */
+	clock_gettime(CLOCK_REALTIME, &info->suspend_time);
 	sem_wait(&queue_sem);
 	list_elem *item = (list_elem*)malloc(sizeof(list_elem));
 	info->le = item;

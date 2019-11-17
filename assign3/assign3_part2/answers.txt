@@ -18,7 +18,13 @@ for handling a signal.
 Question 3.
 When we use POSIX:TMR interval timer, we are using relative time. What is the
 alternative? Explain the difference between the two.
-- The alternative is POSIX:XSI Extension. The basic difference is that
+- The alternative is absolute time.
+- Difference is that: 
+	+ Relative time is initialized with a expiration time based on the time elapsed,
+	e.g program stops after 10 seconds from its start. 
+	+ Absolute time will expire at a specific date and time,
+	e.g program starts at 4:00 AM.
+
 
 Question 4.
 Look at start_worker() in worker.c, a worker thread is executing within an

@@ -31,9 +31,6 @@ static void wait_for_queue();
  * Implement these functions.
  *
  ******************************************************************************/
-/*
- * This function intializes the queue semaphore and the queue itself.
- */
 
 /* 
  * Update the worker's current running time.
@@ -42,7 +39,8 @@ static void wait_for_queue();
 void update_run_time(thread_info_t *info) {
     /* TODO: implement this function */
 	clock_gettime(CLOCK_REALTIME, &info->suspend_time);
-	info->run_time = time_difference(&info->suspend_time, &info->resume_time);
+	info->run_time = info->run_time + time_difference(&info->suspend_time, &info->resume_time);
+
 }
 
 /* 
@@ -52,10 +50,13 @@ void update_run_time(thread_info_t *info) {
 void update_wait_time(thread_info_t *info) {
         /* TODO: implement this function */
 	clock_gettime(CLOCK_REALTIME, &info->resume_time);
-	info->wait_time = time_difference(&info->resume_time, &info->suspend_time);
+	info->wait_time = info->wait_time + time_difference(&info->resume_time, &info->suspend_time);
 }
 
 
+/*
+ * This function intializes the queue semaphore and the queue itself.
+ */
 
 static void init_sched_queue(int queue_size)
 {
@@ -279,7 +280,7 @@ static void create_workers(int thread_count, int *quanta)
 	for (i = 0; i < thread_count; i++) {
 		thread_info_t *info = (thread_info_t *) malloc(sizeof(thread_info_t));
 		info->quanta = quanta[i];
-
+		// info->wait_time = info->run_time = 0;
 		if ((err = pthread_create(&info->thrid, NULL, start_worker, (void *)info)) != 0) {
 			exit_error(err);
 		}
@@ -339,6 +340,7 @@ int smp5_main(int argc, const char** argv)
 	int ret_val = 0;
 	int *quanta,i;
 	pthread_t sched_thread;
+
 
 	/* check the arguments. */
 	if (argc < 3) {
