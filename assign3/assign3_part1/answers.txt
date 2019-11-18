@@ -53,7 +53,8 @@ Q 6  Describe the behavior of exit_error() function in scheduler.c.  Why
      does exit_error() not use errno?
      - It displays error and immediatly exits program
      - It does not use errno since it is designed to display not only errno message but also
-     error returned from other system calls like pthread_create
+     error returned from other system calls like pthread_create because some system call functions like 
+     pthread_create, they won't set errno when errors occurs, instead they return a specific error number. 
 
 Q 7  Does it matter whether the call to sched_ops->wait_for_queue(queue) in
      sched_proc() actually does anything?  How would it affect correctness
