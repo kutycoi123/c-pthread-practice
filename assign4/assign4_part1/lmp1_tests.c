@@ -91,7 +91,7 @@ int test_file_info(int argc, const char **argv)
     quit_if(IOERR_INVALID_ARGS != file_info(NULL, b, sizeof(b)));
 
     // Test stat on old file
-    quit_if(file_info(OLD_FILE, b, sizeof(b)) <= 0);
+    quit_if(file_info(OLD_FILE, b, sizeof(b)));
     params = sscanf(b, fmt, &sz, &accessed, &modified, &ftype);
     quit_if(params != 4);
 
@@ -177,7 +177,7 @@ int test_dir_list(int argc, const char **argv)
     quit_if(dir_list(TESTDATA_DIR, b, sizeof(b)));
 
     quit_if(!memchr(b, 0, sizeof(b)));	// check terminating nul byte
-
+	
     entries = 0;
     names_found[0] = '|';
     names_found[1] = '\0';

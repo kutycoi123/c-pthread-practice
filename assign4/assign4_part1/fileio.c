@@ -43,7 +43,7 @@ int file_info(char *path, void *buffer, size_t bufbytes)
 	char type = isDirectory ? 'd' : 'f';
 	
 	sprintf(buffer, "Size:%d Accessed:%ld Modified:%ld Type:%c", size, accessed, modified, type);
-    return 1;
+    return 0;
 }
 
 int file_write(char *path, int offset, void *buffer, size_t bufbytes)
@@ -61,22 +61,67 @@ int file_write(char *path, int offset, void *buffer, size_t bufbytes)
 
 int file_create(char *path, char *pattern, int repeatcount)
 {
-    return IOERR_NOT_YET_IMPLEMENTED;
+	int fd = -1;
+	fd = open(path, O_WRONLY|O_CREAT, 0777);
+	if(fd == -1)
+		return IOERR_INVALID_PATH;
+	int size_of_pattern = strlen(pattern);
+	int size_of_repeatedPattern = repeatcount * size_of_pattern;
+	char* repeatedPattern = malloc(size_of_repeatedPattern);
+	int i, j = 0;	
+	for(i = 0; i < size_of_repeatedPattern; ++i){
+		repeatedPattern[i] = pattern[j % size_of_pattern];
+		j++;
+	}	
+	repeatedPattern[i] = '\0';
+	write(fd, repeatedPattern, size_of_repeatedPattern);
+	free(repeatedPattern);
+    return 0;
 }
 
+	
 int file_remove(char *path)
 {
-    return IOERR_NOT_YET_IMPLEMENTED;
+	if(path == NULL)
+		return IOERR_INVALID_ARGS;
+	int fd = remove(path);
+	if(fd == -1)
+		return IOERR_INVALID_PATH;
+	
+    return 0;
 }
 
 int dir_create(char *path)
 {
-    return IOERR_NOT_YET_IMPLEMENTED;
+	if(path == NULL)
+		return IOERR_INVALID_ARGS;
+	int err = mkdir(path, 0777);
+	if(err == -1)
+		return IOERR_INVALID_PATH;
+    return 0;
 }
 
 int dir_list(char *path, void *buffer, size_t bufbytes)
 {
-    return IOERR_NOT_YET_IMPLEMENTED;
+	if(bufbytes <= 0 || !path || !buffer )
+        return IOERR_INVALID_ARGS;
+	DIR* dir = opendir(path);
+	if(dir == NULL)
+		return IOERR_INVALID_PATH;
+	struct dirent* d;
+	while((d = readdir(dir)) != NULL){
+		if(strlen((char*)buffer) + strlen(d->d_name) < bufbytes){
+			char*dir_name = malloc(strlen(d->d_name) + 1);
+			sprintf(dir_name, "%s\n", d->d_name);
+			strcat(buffer, dir_name);
+			free(dir_name);
+		
+		}
+		else
+			return IOERR_BUFFER_TOO_SMALL;	
+	}
+		
+    return 0;
 }
 
 
