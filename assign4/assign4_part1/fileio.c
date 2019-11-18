@@ -16,22 +16,10 @@
 
 int file_read(char *path, int offset, void *buffer, size_t bufbytes)
 {
-    if(bufbytes <= 0 || !path || !buffer || offset < 0)
+    if(bufbytes <= 0 || !path || !buffer || offset < 0){
         return IOERR_INVALID_ARGS;
-   /* 
-    FILE *fp;
-    fp = fopen(path, "rb");
-    if(!fp)
-        return IOERR_INVALID_PATH;
-    fseek(fp, offset, SEEK_SET);
-    int readNum = fread(buffer, (int)bufbytes, 2, fp);
-	if(!readNum){
-		
 	}
-    //printf("%d\n", readNum);
-    // int readBytes = readNum * sizeof(buffer)/sizeof(buffer[0]);
-	*/
-	int fd;
+	int fd = -1;
 	fd = open(path, O_RDONLY);
 	if(fd == -1)
 		return IOERR_INVALID_PATH;
@@ -60,7 +48,15 @@ int file_info(char *path, void *buffer, size_t bufbytes)
 
 int file_write(char *path, int offset, void *buffer, size_t bufbytes)
 {
-    return IOERR_NOT_YET_IMPLEMENTED;
+	if(bufbytes <= 0 || !path || !buffer || offset < 0)
+        return IOERR_INVALID_ARGS;
+	int fd;
+	fd = open(path, O_WRONLY|O_APPEND|O_CREAT, 0777);
+	if(fd == -1)
+		return IOERR_INVALID_PATH;
+	lseek(fd, offset, SEEK_SET);
+	int writeBytes = write(fd, buffer, (int)bufbytes);	
+    return writeBytes;
 }
 
 int file_create(char *path, char *pattern, int repeatcount)
