@@ -8,6 +8,7 @@
 #include "restart.h"
 #include "fileio.h"
 #include "string.h"
+#include "util.h"
 #if 1
 #define VERBOSE(p) (p)
 #else
@@ -127,7 +128,19 @@ int dir_list(char *path, void *buffer, size_t bufbytes)
 
 int file_checksum(char *path)
 {
-    return IOERR_NOT_YET_IMPLEMENTED;
+	if(path == NULL)
+		return IOERR_INVALID_ARGS;	
+	char*buffer	;
+	int fd = -1;
+	fd = open(path, O_RDONLY);
+	if(fd == -1)
+		return IOERR_INVALID_PATH;
+	int file_size = lseek(fd, 0, SEEK_END);
+	buffer = malloc(file_size);
+	lseek(fd, 0, SEEK_SET);	
+	read(fd, buffer, file_size);
+	int checksum_val = checksum(buffer, file_size, 0);
+    return checksum_val;
 }
 
 int dir_checksum(char *path)

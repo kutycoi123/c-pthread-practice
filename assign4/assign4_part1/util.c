@@ -37,9 +37,9 @@ void quit_with_message(int errn, char *mesg, char *src, int line)
 unsigned short checksum(char *buffer, size_t sz, unsigned short val)
 {
     if ((!buffer) || (!sz))
-	return val;
+		return val;
     while ((sz--) > 0) {
-	val += *(buffer++);
+		val += *(buffer++);
     }
     return val;
 }
