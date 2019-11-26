@@ -66,17 +66,20 @@ int file_create(char *path, char *pattern, int repeatcount)
 	fd = open(path, O_WRONLY|O_CREAT, 0777);
 	if(fd == -1)
 		return IOERR_INVALID_PATH;
-	int size_of_pattern = strlen(pattern);
-	int size_of_repeatedPattern = repeatcount * size_of_pattern;
-	char* repeatedPattern = malloc(size_of_repeatedPattern);
-	int i, j = 0;	
-	for(i = 0; i < size_of_repeatedPattern; ++i){
-		repeatedPattern[i] = pattern[j % size_of_pattern];
-		j++;
-	}	
-	repeatedPattern[i] = '\0';
-	write(fd, repeatedPattern, size_of_repeatedPattern);
-	free(repeatedPattern);
+	if(pattern != NULL){
+		int size_of_pattern = strlen(pattern);
+		int size_of_repeatedPattern = repeatcount * size_of_pattern;
+		char* repeatedPattern = malloc(size_of_repeatedPattern);
+		int i, j = 0;	
+		for(i = 0; i < size_of_repeatedPattern; ++i){
+			repeatedPattern[i] = pattern[j % size_of_pattern];
+			j++;
+		}	
+		repeatedPattern[i] = '\0';
+		write(fd, repeatedPattern, size_of_repeatedPattern);
+		free(repeatedPattern);
+	}
+	
     return 0;
 }
 
@@ -121,7 +124,8 @@ int dir_list(char *path, void *buffer, size_t bufbytes)
 		else
 			return IOERR_BUFFER_TOO_SMALL;	
 	}
-		
+	
+	closedir(dir);
     return 0;
 }
 
@@ -145,5 +149,23 @@ int file_checksum(char *path)
 
 int dir_checksum(char *path)
 {
-    return IOERR_NOT_YET_IMPLEMENTED;
+	if(path == NULL)
+		return IOERR_INVALID_ARGS;
+	
+
+	DIR* dir = opendir(path);
+	if(dir == NULL)
+		return IOERR_INVALID_PATH;
+	int checksum = 0;
+	while((d = readdir(dir)) != NULL){
+		if(d->d_type == DT_DIR){
+			checksum += dir_checksum(d->d_name);
+		}else if(d->d_type == DT_REG){
+			checksum += file_checksum(d->d_name);
+		}
+	}
+
+	closedir(dir);
+
+    return checksum;
 }
