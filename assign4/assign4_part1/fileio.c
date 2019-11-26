@@ -26,6 +26,7 @@ int file_read(char *path, int offset, void *buffer, size_t bufbytes)
 		return IOERR_INVALID_PATH;
 	lseek(fd, offset, SEEK_SET);
 	int readBytes = read(fd, buffer, bufbytes);
+	close(fd);
     return readBytes;
 }
 
@@ -57,6 +58,7 @@ int file_write(char *path, int offset, void *buffer, size_t bufbytes)
 		return IOERR_INVALID_PATH;
 	lseek(fd, offset, SEEK_SET);
 	int writeBytes = write(fd, buffer, (int)bufbytes);	
+	close(fd);
     return writeBytes;
 }
 
@@ -64,8 +66,10 @@ int file_create(char *path, char *pattern, int repeatcount)
 {
 	int fd = -1;
 	fd = open(path, O_WRONLY|O_CREAT, 0777);
-	if(fd == -1)
+	if(fd == -1){
+		close(fd);
 		return IOERR_INVALID_PATH;
+	}
 	if(pattern != NULL){
 		int size_of_pattern = strlen(pattern);
 		int size_of_repeatedPattern = repeatcount * size_of_pattern;
@@ -79,7 +83,7 @@ int file_create(char *path, char *pattern, int repeatcount)
 		write(fd, repeatedPattern, size_of_repeatedPattern);
 		free(repeatedPattern);
 	}
-	
+	close(fd);	
     return 0;
 }
 
@@ -137,13 +141,16 @@ int file_checksum(char *path)
 	char*buffer	;
 	int fd = -1;
 	fd = open(path, O_RDONLY);
-	if(fd == -1)
+	if(fd == -1){
+		close(fd);
 		return IOERR_INVALID_PATH;
+	}
 	int file_size = lseek(fd, 0, SEEK_END);
 	buffer = malloc(file_size);
 	lseek(fd, 0, SEEK_SET);	
 	read(fd, buffer, file_size);
 	int checksum_val = checksum(buffer, file_size, 0);
+	close(fd);
     return checksum_val;
 }
 
@@ -151,21 +158,31 @@ int dir_checksum(char *path)
 {
 	if(path == NULL)
 		return IOERR_INVALID_ARGS;
-	
-
 	DIR* dir = opendir(path);
-	if(dir == NULL)
+	if(dir == NULL){
+		closedir(dir);
 		return IOERR_INVALID_PATH;
-	int checksum = 0;
-	while((d = readdir(dir)) != NULL){
-		if(d->d_type == DT_DIR){
-			checksum += dir_checksum(d->d_name);
-		}else if(d->d_type == DT_REG){
-			checksum += file_checksum(d->d_name);
-		}
 	}
+	int checksum_val = 0;
+	struct dirent* d;
+	while((d = readdir(dir)) != NULL){
+		char* new_path = malloc(strlen(path) + strlen(d->d_name) + 2);
+		sprintf(new_path, "%s/%s", path, d->d_name);
 
+		if(!strcmp(d->d_name, ".") || !strcmp(d->d_name, "..")){}
+		else if(d->d_type == DT_DIR){
+			int dir_checksum_val = dir_checksum(new_path);
+			if(dir_checksum_val >= 0)
+				checksum_val += dir_checksum_val;
+			checksum_val = checksum(d->d_name, strlen(d->d_name), checksum_val);
+		}else if(d->d_type == DT_REG){
+			int file_checksum_val = file_checksum(new_path);
+			if(file_checksum >= 0){
+				checksum_val += file_checksum_val;
+			}
+		}
+		free(new_path);
+	}
 	closedir(dir);
-
-    return checksum;
+    return checksum_val;
 }

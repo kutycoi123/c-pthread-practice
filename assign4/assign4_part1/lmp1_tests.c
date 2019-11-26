@@ -238,8 +238,8 @@ int test_dir_checksum(int argc, const char **argv)
     cksum = checksum("OldFile", 7, checksum("Hello", 5, 0));
 
     for (i = 2; i <= 20; i++) {
-	sprintf(dname, "%d", i);
-	cksum = checksum(dname, strlen(dname), cksum);
+		sprintf(dname, "%d", i);
+		cksum = checksum(dname, strlen(dname), cksum);
     }
 
     cksum2 = dir_checksum(SUBDIR1_DIR);
