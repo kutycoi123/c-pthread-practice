@@ -476,25 +476,30 @@ static void file_read_rewrite_block()
     bufindex = 0;
     if ((words = read(fd, (char *) buf, Chunk)) == -1) //file_read
 	   io_error("rewrite read");
-
+	
     while (words == Chunk) {
+		//printf("words = %ld, bufsz = %ld\n", words, sizeof(buf)/sizeof(buf[0]));
     	if (bufindex == Chunk / IntSize)
     	    bufindex = 0;
     	buf[bufindex++]++;
-    	if (lseek(fd, (off_t) - words, 1) == -1)
+    	if ((t = lseek(fd, (off_t) - words, 1)) == -1)
     	    io_error("relative lseek(2)");
     	if (write(fd, (char *) buf, words) == -1) //file_write
     	    io_error("re write(2)");
     	if ((words = read(fd, (char *) buf, Chunk)) == -1) //file_read
     	    io_error("rwrite read");
     }
-
     if (close(fd) == -1)
 	   io_error("close after rewrite");
     get_delta_t(ReWrite);
     fprintf(stderr, "...done FUNCTION file_read_rewrite_block()\n");
 }
 
+static void file_read_rewrite_block_v2()
+{
+	fprintf(stderr, "FUNCTION file_read_rewrite() start...");
+	
+}
 
 /*********************************************************************/
 /*                     FUNCTION file_read_getc                       */

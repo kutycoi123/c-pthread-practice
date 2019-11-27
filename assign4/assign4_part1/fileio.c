@@ -169,8 +169,9 @@ int dir_checksum(char *path)
 		char* new_path = malloc(strlen(path) + strlen(d->d_name) + 2);
 		sprintf(new_path, "%s/%s", path, d->d_name);
 
-		if(!strcmp(d->d_name, ".") || !strcmp(d->d_name, "..")){}
-		else if(d->d_type == DT_DIR){
+		if(!strcmp(d->d_name, ".") || !strcmp(d->d_name, "..")) continue;
+
+		if(d->d_type == DT_DIR){
 			int dir_checksum_val = dir_checksum(new_path);
 			if(dir_checksum_val >= 0)
 				checksum_val += dir_checksum_val;
