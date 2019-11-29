@@ -482,7 +482,7 @@ static void file_read_rewrite_block()
     	if (bufindex == Chunk / IntSize)
     	    bufindex = 0;
     	buf[bufindex++]++;
-    	if ((t = lseek(fd, (off_t) - words, 1)) == -1)
+    	if (lseek(fd, (off_t) - words, 1) == -1)
     	    io_error("relative lseek(2)");
     	if (write(fd, (char *) buf, words) == -1) //file_write
     	    io_error("re write(2)");
