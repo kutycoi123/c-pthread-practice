@@ -24,27 +24,38 @@ int file_read(char *path, int offset, void *buffer, size_t bufbytes)
 	fd = open(path, O_RDONLY);
 	if(fd == -1)
 		return IOERR_INVALID_PATH;
-	lseek(fd, offset, SEEK_SET);
+	if(lseek(fd, offset, SEEK_SET) == -1)
+		return IOERR_POSIX;
 	int readBytes = read(fd, buffer, bufbytes);
-	close(fd);
+	if(readBytes == -1)
+		return IOERR_POSIX;
+	if(close(fd) == -1)
+		return IOERR_POSIX;
     return readBytes;
 }
 
 int file_info(char *path, void *buffer, size_t bufbytes)
 {
-    if (!path || !buffer || bufbytes < 1)
+    if (!path || !buffer || bufbytes <= 0)
 		return IOERR_INVALID_ARGS;
 	struct stat fileStat;
 
-	if (stat(path, &fileStat) < 0)
-		return IOERR_POSIX; 	
+	int fd = -1;
+	fd = open(path, O_RDONLY);
+	if(fd == -1)
+		return IOERR_POSIX;
+	if(fstat(fd, &fileStat) < 0)
+		return IOERR_POSIX;	
 	int size = fileStat.st_size;
 	long accessed = fileStat.st_atim.tv_sec;
 	long modified = fileStat.st_mtim.tv_sec; 
 	int isDirectory = S_ISDIR(fileStat.st_mode);
 	char type = isDirectory ? 'd' : 'f';
 	
-	sprintf(buffer, "Size:%d Accessed:%ld Modified:%ld Type:%c", size, accessed, modified, type);
+	sprintf((char*)buffer, "Size:%d Accessed:%ld Modified:%ld Type:%c", size, accessed, modified, type);
+	
+	if(close(fd) == -1)
+		return IOERR_POSIX;
     return 0;
 }
 
@@ -53,12 +64,16 @@ int file_write(char *path, int offset, void *buffer, size_t bufbytes)
 	if(bufbytes <= 0 || !path || !buffer || offset < 0)
         return IOERR_INVALID_ARGS;
 	int fd;
-	fd = open(path, O_WRONLY|O_APPEND|O_CREAT, 0777);
+	fd = open(path, O_RDWR | O_CREAT, 0777);
 	if(fd == -1)
 		return IOERR_INVALID_PATH;
-	lseek(fd, offset, SEEK_SET);
+	if(lseek(fd, offset, SEEK_SET) == -1)
+		return IOERR_POSIX;
 	int writeBytes = write(fd, buffer, (int)bufbytes);	
-	close(fd);
+	if(writeBytes == -1)
+		return IOERR_POSIX;
+	if(close(fd) == -1)
+		return IOERR_POSIX;
     return writeBytes;
 }
 
@@ -74,16 +89,19 @@ int file_create(char *path, char *pattern, int repeatcount)
 		int size_of_pattern = strlen(pattern);
 		int size_of_repeatedPattern = repeatcount * size_of_pattern;
 		char* repeatedPattern = malloc(size_of_repeatedPattern);
-		int i, j = 0;	
+		int i;	
 		for(i = 0; i < size_of_repeatedPattern; ++i){
-			repeatedPattern[i] = pattern[j % size_of_pattern];
-			j++;
+			repeatedPattern[i] = pattern[i % size_of_pattern];
 		}	
 		repeatedPattern[i] = '\0';
-		write(fd, repeatedPattern, size_of_repeatedPattern);
+		if(write(fd, repeatedPattern, size_of_repeatedPattern) == -1){
+			free(repeatedPattern);
+			return IOERR_POSIX;
+		}
 		free(repeatedPattern);
 	}
-	close(fd);	
+	if(close(fd) == -1)
+		return IOERR_POSIX;	
     return 0;
 }
 
@@ -129,7 +147,8 @@ int dir_list(char *path, void *buffer, size_t bufbytes)
 			return IOERR_BUFFER_TOO_SMALL;	
 	}
 	
-	closedir(dir);
+	if(closedir(dir) == -1)
+		return IOERR_POSIX;
     return 0;
 }
 
@@ -139,18 +158,22 @@ int file_checksum(char *path)
 	if(path == NULL)
 		return IOERR_INVALID_ARGS;	
 	char*buffer	;
-	int fd = -1;
+	int fd = -1, file_size;
 	fd = open(path, O_RDONLY);
 	if(fd == -1){
 		close(fd);
 		return IOERR_INVALID_PATH;
 	}
-	int file_size = lseek(fd, 0, SEEK_END);
+	if((file_size = lseek(fd, 0, SEEK_END)) == -1)
+		return IOERR_POSIX;
 	buffer = malloc(file_size);
-	lseek(fd, 0, SEEK_SET);	
-	read(fd, buffer, file_size);
+	if(lseek(fd, 0, SEEK_SET) == -1)
+		return IOERR_POSIX;	
+	if(read(fd, buffer, file_size) == -1)
+		return IOERR_POSIX;
 	int checksum_val = checksum(buffer, file_size, 0);
-	close(fd);
+	if(close(fd) == -1)
+		return IOERR_POSIX;
     return checksum_val;
 }
 
@@ -184,6 +207,7 @@ int dir_checksum(char *path)
 		}
 		free(new_path);
 	}
-	closedir(dir);
+	if(closedir(dir) == -1)
+		return IOERR_POSIX;
     return checksum_val;
 }

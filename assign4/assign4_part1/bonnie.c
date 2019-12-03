@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include "fileio.h"
 #if defined(SysV)
 #include <limits.h>
 #include <sys/times.h>
@@ -58,7 +59,6 @@ static void fill_file_block();
 static void file_read_rewrite_block();
 static void file_read_getc();
 static void file_read_chunk();
-
 #if defined(SysV)
 /* System V wrappers for randomizers */
 static long random();
@@ -467,39 +467,64 @@ static void fill_file_block()
 
 static void file_read_rewrite_block()
 {
-    fprintf(stderr, "FUNCTION file_read_rewrite() start...");
-    newfile(name, &fd, &stream, 0);
-    if (lseek(fd, (off_t) 0, 0) == (off_t) - 1)
-	   io_error("lseek(2) before rewrite");
-    fprintf(stderr, "Rewriting");
-    timestamp();
-    bufindex = 0;
-    if ((words = read(fd, (char *) buf, Chunk)) == -1) //file_read
-	   io_error("rewrite read");
-	
-    while (words == Chunk) {
-		//printf("words = %ld, bufsz = %ld\n", words, sizeof(buf)/sizeof(buf[0]));
-    	if (bufindex == Chunk / IntSize)
-    	    bufindex = 0;
-    	buf[bufindex++]++;
-    	if (lseek(fd, (off_t) - words, 1) == -1)
-    	    io_error("relative lseek(2)");
-    	if (write(fd, (char *) buf, words) == -1) //file_write
-    	    io_error("re write(2)");
+	/* OLD CODE */
+	/*
+    	fprintf(stderr, "FUNCTION file_read_rewrite() start...");
+    	newfile(name, &fd, &stream, 0);
+    	if (lseek(fd, (off_t) 0, 0) == (off_t) - 1)
+		   io_error("lseek(2) before rewrite");
+    	fprintf(stderr, "Rewriting");
+    	timestamp();
+    	bufindex = 0;
+
     	if ((words = read(fd, (char *) buf, Chunk)) == -1) //file_read
-    	    io_error("rwrite read");
-    }
-    if (close(fd) == -1)
-	   io_error("close after rewrite");
-    get_delta_t(ReWrite);
-    fprintf(stderr, "...done FUNCTION file_read_rewrite_block()\n");
+		   io_error("rewrite read");
+			
+    	while (words == Chunk) {
+			//printf("words = %ld, bufsz = %ld\n", words, sizeof(buf)/sizeof(buf[0]));
+    		if (bufindex == Chunk / IntSize)
+    		    bufindex = 0;
+    		buf[bufindex++]++;
+    		if (lseek(fd, (off_t) - words, 1) == -1)
+    		    io_error("relative lseek(2)");
+    		if (write(fd, (char *) buf, words) == -1) //file_write
+    		    io_error("re write(2)");
+    		if ((words = read(fd, (char *) buf, Chunk)) == -1) //file_read
+    		    io_error("rwrite read");
+			
+    	}
+    	if (close(fd) == -1)
+		   io_error("close after rewrite");
+    	get_delta_t(ReWrite);
+    	fprintf(stderr, "...done FUNCTION file_read_rewrite_block()\n");
+	*/
+	
+
+	/* NEW CODE */
+	fprintf(stderr, "FUNCTION file_read_rewrite() start...");
+	file_create(name, NULL, 0);
+	fprintf(stderr, "Rewriting");
+	timestamp();
+	bufindex = 0;
+	if((words = file_read(name, 0, buf, Chunk)) < 0)
+		io_error("rewrite read");
+
+	int off_set_byte = 0;
+	while(words == Chunk){
+		if(bufindex == Chunk / IntSize)
+			bufindex = 0;
+		buf[bufindex++]++;
+		if(file_write(name, off_set_byte, buf, words) < 0)
+			io_error("re write(2)");
+		off_set_byte += words;
+		if((words = file_read(name, off_set_byte, buf, Chunk)) < 0)
+			io_error("rwrite read");
+			
+	}
+	get_delta_t(ReWrite);
+	fprintf(stderr, "...done FUNCTION file_read_rewrite_block()\n");
 }
 
-static void file_read_rewrite_block_v2()
-{
-	fprintf(stderr, "FUNCTION file_read_rewrite() start...");
-	
-}
 
 /*********************************************************************/
 /*                     FUNCTION file_read_getc                       */
