@@ -290,7 +290,7 @@ static void report(char *machine, off_t size)
 	("-Per Char- --Block--- -Rewrite-- -Per Char- --Block--- --Seeks---\n");
     printf("Machine    MB ");
     printf("K/sec %%CPU K/sec %%CPU K/sec %%CPU K/sec %%CPU K/sec ");
-    printf("%%CPU  /sec %%CPU\n");
+    printf("%%CPU  K/sec %%CPU\n");
     printf("%-8.8s %4ld ", machine, size / (1024 * 1024));
 
     printf("%5d %4.1f %5d %4.1f %5d %4.1f ",

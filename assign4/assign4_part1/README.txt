@@ -165,32 +165,47 @@ Questions
 
 Q1.  Briefly explain what the following code from bonnie.c does:
 if ((words = read(fd, (char *) buf, Chunk)) == -1) ...
-
+	- First, it calls read() to read maximum Chunk bytes from file descriptor fd and store it to buf
+	"words" is used to store the returned read bytes
+	- Second, it checks if the returned bytes from reading equals to -1 or not, meaning if the reading
+	failed or not.  
 
 Q2. Is the above an example of a block read or a character read?  What
 is the value of the variable 'words' if the read succeeds?  Fails?
-
+	- The above example is a block read since it reads upto Chunk bytes and stores it into a char* variable
+	- If read succeeds, 'words' contains the number of bytes that have been read successfully. Otherwise, 'words' contain
+	value of -1
 
 Q3.  Explain the meaning of the flag value (O_CREAT | O_WRONLY |
 O_APPEND) for the POSIX function open().
-
+	- The flag value means the program can open a file with 3 modes corresponding to 3 permitted operations:
+		+ O_CREATE: If the file does not exist, create it as a regular file
+		+ O_WRONLY: Program can only write to this file
+		+ O_APPEND: Program can only append content to the end of this file
 
 Q4. Run Bonnie. What is being measured by each test function?
-
+	- It's measuring the time spent for each test function
+	 and amount of cpu usage that the program has been using for that test function.  
 
 Q5. Look at the summary results from the Bonnie run in Q4. Does Bonnie
 measure latency, throughput or something else?  Justify your answer.
-
+	- Bonnie measures the bytes processed per elapsed second (K/sec)
+	and the percentae of CPU usage (%CPU)
 
 Q6. Compare character reads with block reads using Bonnie.  Which is
 faster?  Why do you think this is the case?
-
+	- Block reads is faster than character reads.
+	- I think this is the case since calling many system calls will slow down the operation
+		+ when we use character reads, we need to call POSIX function
+			a lot of times,  which clearly slow down the operation.
+		+ However, block reads only  needs to call POSIX function much fewer times since for each time it can
+			read a large number of bytes, so it saves more system calls therefore it runs faster
 
 Q7. Copy and paste the performance measures output when running Bonnie
 benchmarks in a local directory and again in an NFS-mounted directory.
 Is one kind of disk access noticeably slower over the network, or are
 all tests significantly slower?
-
+	- 
 Your home directory may be an NFS mount, whereas /tmp and /scratch are local
 disks.  To test your code in /tmp, do the following:
 mkdir /tmp/your_username
@@ -205,12 +220,17 @@ rm -fr /tmp/your_username
 Q8. How does Bonnie handle incomplete reads, e.g., due to interruptions
 from signals?  Justify why Bonnie's approach is good or bad for a
 filesystem benchmark program.
-
+	- Bonnie handle incomplete reads by printing out both custom error message and system error message
+	and then exit the program immediately
+	- I think this approach is bad for a filesystem since there might be some files that are stil being processed 
+	while the program is trying to exit. If these files are not closed properly, they can cause some system error for other programs.
+	Moreover, those files needs to be removed after the program exits, otherwise they will unnecessarily
+	 consume a large amount of memory in filesystem. 
 
 Q9. By now you should be very familiar with the self-evaluation test
 harness we provide for the MPs.  Examine the function test_file_read()
 in lmp1_tests.c, which tests your file_read() function from Step 2.
-
+	
 What does this test check for, specifically?  You may want to copy and
 paste the code for this function in your answer, and annotate each
 quit_if or group of related quit_ifs with a comment.
